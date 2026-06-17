@@ -3,7 +3,7 @@ import { ENV } from '../config/config';
 
 export const connectDatabase = async () => {
   try {
-    await mongoose.connect(ENV.MONGO_URI);
+    await mongoose.connect(ENV.MONGO_URI, { family: 4 });
     console.log('[Database] MongoDB connected successfully');
   } catch (error: any) {
     console.error('\n❌ [CRITICAL ERROR] Failed to connect to MongoDB!');
