@@ -61,7 +61,7 @@ export const startApi = () => {
     res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
   });
 
-  app.listen(ENV.PORT, () => {
+  app.listen(Number(ENV.PORT), '0.0.0.0', () => {
     console.log(`[API] Dashboard API running on port ${ENV.PORT}`);
   });
 };
