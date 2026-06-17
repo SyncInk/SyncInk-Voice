@@ -14,5 +14,9 @@ COPY . .
 # Build TypeScript code
 RUN npm run build
 
+# Expose the dashboard port
+EXPOSE 3000
+ENV PORT=3000
+
 # Start the bot
 CMD [ "npm", "start" ]
