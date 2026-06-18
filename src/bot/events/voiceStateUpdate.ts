@@ -8,7 +8,7 @@ import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { ENV } from '../../config/config';
 
 export const handleVoiceStateUpdate = async (
-  client: SyncinkBot,
+  _client: SyncinkBot,
   oldState: VoiceState,
   newState: VoiceState,
 ) => {
@@ -64,9 +64,9 @@ export const handleVoiceStateUpdate = async (
         .setTitle('Welcome to your temporary voice channel')
         .setDescription(
           `Control your channel using the menus below.\n` +
-            `• Use the dropdowns to manage settings and permissions\n` +
-            `• Alternatively use \`/voice\` commands\n` +
-            `• Open the dashboard to sync your defaults instantly: ${ENV.DASHBOARD_URL}`,
+            `- Use the dropdowns to manage settings and permissions\n` +
+            `- Alternatively use \`/voice\` commands\n` +
+            `- Open the dashboard to sync your defaults instantly: ${ENV.DASHBOARD_URL}`,
         );
 
       const components = [...getPanelButtons(), ...getPanelDropdowns()];

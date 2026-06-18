@@ -6,8 +6,10 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "build:all": "npm run build && cd dashboard && npm install && npm run build"
+    "build:bot": "tsc",
+    "build:dashboard": "npm --prefix dashboard ci && npm --prefix dashboard run build",
+    "build": "npm run build:bot && npm run build:dashboard",
+    "build:all": "npm run build"
   },
   "dependencies": {
     "cors": "^2.8.5",

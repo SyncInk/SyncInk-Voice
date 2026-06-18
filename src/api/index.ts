@@ -12,8 +12,8 @@ import { SyncinkBot } from '../bot/bot';
 const SESSION_COOKIE_NAME = 'syncink_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const MANAGE_GUILD_MASK = BigInt(PermissionFlagsBits.ManageGuild);
-const ADMIN_MASK = BigInt(PermissionFlagsBits.Administrator);
+const MANAGE_GUILD_MASK = PermissionFlagsBits.ManageGuild;
+const ADMIN_MASK = PermissionFlagsBits.Administrator;
 
 type SessionRecord = {
   accessToken: string;
@@ -84,7 +84,7 @@ const getCookieValue = (req: Request, name: string) => {
 const buildAvatarUrl = (user: DiscordUser) =>
   user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
-    : `https://cdn.discordapp.com/embed/avatars/${Number(user.id) % 5}.png`;
+    : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) % 5n)}.png`;
 
 const isHttpsUrl = (url: string) => {
   try {
@@ -314,7 +314,7 @@ const validateGuildChannel = async (
 };
 
 const getActiveRooms = async (guild: Guild) => {
-  const tempRooms = await TempChannel.find({ guildId: guild.id }).sort({ createdAt: -1 }).lean();
+  const tempRooms = await TempChannel.find({ guildId: guild.id }).sort({ _id: -1 }).lean();
 
   return Promise.all(
     tempRooms.map(async (room) => {

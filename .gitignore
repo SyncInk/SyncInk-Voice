@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 .DS_Store
+dashboard/node_modules/
+dashboard/dist/
