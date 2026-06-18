@@ -21,7 +21,7 @@ const bootstrap = async () => {
   await bot.start();
 
   // 3. Start Dashboard API
-  startApi();
+  startApi(bot);
 };
 
 bootstrap().catch(console.error);
