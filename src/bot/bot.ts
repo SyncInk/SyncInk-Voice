@@ -14,6 +14,7 @@ export class SyncinkBot extends Client {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
       ],
     });
     this.commands = new Collection();

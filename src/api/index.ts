@@ -175,12 +175,11 @@ const createOAuthUrl = (state: string, redirectUri: string) => {
     client_id: ENV.CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'identify guilds',
     prompt: 'consent',
     state,
   });
 
-  return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+  return `https://discord.com/api/oauth2/authorize?${params.toString()}&scope=identify%20guilds`;
 };
 
 const exchangeDiscordCode = async (code: string, redirectUri: string) => {
@@ -217,7 +216,8 @@ const fetchDiscordUser = async (accessToken: string) => {
   });
 
   if (!response.ok) {
-    throw new Error('Unable to fetch Discord user');
+    const errorBody = await response.text();
+    throw new Error(`Unable to fetch Discord user: ${response.status} ${errorBody}`);
   }
 
   return (await response.json()) as DiscordUser;
@@ -231,7 +231,8 @@ const fetchDiscordGuilds = async (accessToken: string) => {
   });
 
   if (!response.ok) {
-    throw new Error('Unable to fetch Discord guilds');
+    const errorBody = await response.text();
+    throw new Error(`Unable to fetch Discord guilds: ${response.status} ${errorBody}`);
   }
 
   return (await response.json()) as DiscordGuild[];
@@ -272,6 +273,25 @@ const getManageableGuilds = async (bot: SyncinkBot, accessToken: string) => {
     })
     .filter((guild) => guild.botConnected)
     .sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const getManageableGuildsSafely = async (bot: SyncinkBot, accessToken: string) => {
+  try {
+    return {
+      guilds: await getManageableGuilds(bot, accessToken),
+      unavailable: false,
+      error: null as string | null,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to fetch Discord guilds';
+    console.error('[API] Discord guild fetch failed:', message);
+
+    return {
+      guilds: [],
+      unavailable: true,
+      error: message,
+    };
+  }
 };
 
 const ensureGuildAccess = async (bot: SyncinkBot, session: SessionRecord, guildId: string) => {
@@ -478,7 +498,7 @@ export const startApi = (bot: SyncinkBot) => {
         profile = await UserProfile.create({ userId: session.user.id });
       }
 
-      const manageableGuilds = await getManageableGuilds(bot, session.accessToken);
+      const manageableGuildsResult = await getManageableGuildsSafely(bot, session.accessToken);
       const activeRoomsOwned = await TempChannel.countDocuments({ ownerId: session.user.id });
       const activeRoomsGlobal = await TempChannel.countDocuments();
 
@@ -495,10 +515,11 @@ export const startApi = (bot: SyncinkBot) => {
           defaultBitrate: profile.defaultBitrate,
         },
         overview: {
-          managedGuilds: manageableGuilds.length,
+          managedGuilds: manageableGuildsResult.guilds.length,
           activeRoomsOwned,
           activeRoomsGlobal,
         },
+        guildsUnavailable: manageableGuildsResult.unavailable,
       });
     } catch (error) {
       console.error('[API] Failed to fetch user profile:', error);
@@ -543,8 +564,12 @@ export const startApi = (bot: SyncinkBot) => {
     const session = req.session!;
 
     try {
-      const guilds = await getManageableGuilds(bot, session.accessToken);
-      res.json({ guilds });
+      const result = await getManageableGuildsSafely(bot, session.accessToken);
+      res.json({
+        guilds: result.guilds,
+        unavailable: result.unavailable,
+        message: result.unavailable ? 'Discord did not return your server list. Log out and sign in again.' : null,
+      });
     } catch (error) {
       console.error('[API] Failed to fetch guild list:', error);
       res.status(500).json({ error: 'Failed to fetch your servers' });

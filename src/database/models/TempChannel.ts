@@ -12,6 +12,8 @@ export interface ITempChannel extends Document {
   isPrivate: boolean;
   userLimit: number;
   bitrate: number;
+  status: string | null;
+  isNsfw: boolean;
 }
 
 const TempChannelSchema = new Schema<ITempChannel>({
@@ -26,6 +28,8 @@ const TempChannelSchema = new Schema<ITempChannel>({
   isPrivate: { type: Boolean, default: false },
   userLimit: { type: Number, default: 0 },
   bitrate: { type: Number, default: 64000 },
+  status: { type: String, default: null },
+  isNsfw: { type: Boolean, default: false },
 });
 
 export const TempChannel = model<ITempChannel>('TempChannel', TempChannelSchema);

@@ -5,6 +5,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
   TextChannel,
+  VoiceChannel,
 } from 'discord.js';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { buildEmbed } from '../utils/embed';
@@ -15,6 +16,12 @@ export const data = new SlashCommandBuilder()
   .setName('setup')
   .setDescription('Sets up the Syncink Voice system for this server')
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .addChannelOption((option) =>
+    option
+      .setName('join_channel')
+      .setDescription('Use an existing voice channel as the Join to Create channel')
+      .addChannelTypes(ChannelType.GuildVoice),
+  )
   .addChannelOption((option) =>
     option
       .setName('category')
@@ -39,6 +46,11 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
 
     let category = interaction.options.getChannel('category') as CategoryChannel | null;
     let controlChannel = interaction.options.getChannel('control_channel') as TextChannel | null;
+    let createChannel = interaction.options.getChannel('join_channel') as VoiceChannel | null;
+
+    if (!category && createChannel?.parent && createChannel.parent.type === ChannelType.GuildCategory) {
+      category = createChannel.parent;
+    }
 
     if (!category) {
       category = await guild.channels.create({
@@ -47,11 +59,13 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       });
     }
 
-    const createChannel = await guild.channels.create({
-      name: 'Join to Create',
-      type: ChannelType.GuildVoice,
-      parent: category.id,
-    });
+    if (!createChannel) {
+      createChannel = await guild.channels.create({
+        name: 'Join to Create',
+        type: ChannelType.GuildVoice,
+        parent: category.id,
+      });
+    }
 
     if (!controlChannel) {
       controlChannel = await guild.channels.create({

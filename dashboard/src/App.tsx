@@ -28,6 +28,12 @@ type GuildSummary = {
   botConnected: boolean;
 };
 
+type GuildListResponse = {
+  guilds: GuildSummary[];
+  unavailable?: boolean;
+  message?: string | null;
+};
+
 type GuildSettings = {
   setupChannelId: string;
   setupCategoryId: string;
@@ -180,7 +186,7 @@ function App() {
       const sessionData = (await sessionResponse.json()) as { user: User };
       const [meData, guildData] = await Promise.all([
         requestJson<{ settings: ProfileSettings; overview: Overview }>('/api/users/me'),
-        requestJson<{ guilds: GuildSummary[] }>('/api/guilds'),
+        requestJson<GuildListResponse>('/api/guilds'),
       ]);
 
       setIsAuthenticated(true);
@@ -192,6 +198,9 @@ function App() {
       });
       setOverview(meData.overview);
       setGuilds(guildData.guilds);
+      if (guildData.unavailable && guildData.message) {
+        setErrorMessage(guildData.message);
+      }
 
       const nextGuildId = guildData.guilds[0]?.id || '';
       setSelectedGuildId(nextGuildId);
@@ -336,7 +345,7 @@ function App() {
             <div className="brand__mark">SV</div>
             <div>
               <div className="brand__name">SyncInk Voice</div>
-              <div className="brand__tag">Temporary voice channels without paywalls</div>
+              <div className="brand__tag">Temporary voice channel manager</div>
             </div>
           </div>
           <button className="button button--ghost" onClick={handleDiscordLogin}>
@@ -346,11 +355,10 @@ function App() {
 
         <main className="landing-grid">
           <section className="hero-card glass-panel">
-            <span className="pill">Free forever</span>
-            <h1>Manage your temp VC bot with a real Discord-synced dashboard.</h1>
+            <span className="pill">Dashboard</span>
+            <h1>Manage temporary voice channels for your Discord server.</h1>
             <p>
-              Let members create rooms instantly, keep server defaults tidy, and sign in with Discord to manage only
-              the servers you actually control.
+              Sign in with Discord to configure your servers, personal room defaults, active rooms, and channel controls.
             </p>
 
             <div className="hero-actions">
@@ -364,16 +372,16 @@ function App() {
 
             <div className="feature-grid">
               <div className="feature-card">
-                <strong>Live bot sync</strong>
-                <span>Personal defaults and guild settings are applied directly to created voice rooms.</span>
+                <strong>Room defaults</strong>
+                <span>Set names, limits, bitrate, and server setup from one place.</span>
               </div>
               <div className="feature-card">
-                <strong>Discord login</strong>
-                <span>Only server managers can open guild settings, with no fake demo accounts.</span>
+                <strong>Server controls</strong>
+                <span>Manage the join-to-create channel and control panel configuration.</span>
               </div>
               <div className="feature-card">
-                <strong>Glassy purple UI</strong>
-                <span>A cleaner look that fits a Discord utility product without the premium clutter.</span>
+                <strong>Active rooms</strong>
+                <span>See live temporary rooms and the current owner at a glance.</span>
               </div>
             </div>
           </section>
@@ -403,7 +411,7 @@ function App() {
           <div className="brand__mark">SV</div>
           <div>
             <div className="brand__name">SyncInk Voice</div>
-            <div className="brand__tag">Free dashboard for your temporary VC bot</div>
+            <div className="brand__tag">Temporary voice channel manager</div>
           </div>
         </div>
 
@@ -486,11 +494,10 @@ function App() {
 
         <section className="dashboard-main">
           <section className="glass-panel banner-panel">
-            <span className="pill">No premium tab</span>
-            <h2>Everything here is free and synced with your bot.</h2>
+            <span className="pill">Control center</span>
+            <h2>Manage voice rooms, defaults, and server setup.</h2>
             <p>
-              Personal defaults affect the rooms you create. Server defaults affect the guild-wide join-to-create
-              behavior. Run <code>/setup</code> in Discord once if your server has not been configured yet.
+              Run <code>/setup</code> in Discord once if the selected server has not been configured yet.
             </p>
           </section>
 

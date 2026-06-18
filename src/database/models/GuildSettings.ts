@@ -6,7 +6,7 @@ export interface IGuildSettings extends Document {
   setupCategoryId: string | null;
   voiceControlChannelId: string | null;
   defaultLimit: number;
-  defaultName: string; // e.g. "{user}'s Room"
+  defaultName: string;
 }
 
 const GuildSettingsSchema = new Schema<IGuildSettings>({
@@ -15,7 +15,7 @@ const GuildSettingsSchema = new Schema<IGuildSettings>({
   setupCategoryId: { type: String, default: null },
   voiceControlChannelId: { type: String, default: null },
   defaultLimit: { type: Number, default: 0 },
-  defaultName: { type: String, default: "{user}'s Room" },
+  defaultName: { type: String, default: '{name}' },
 });
 
 export const GuildSettings = model<IGuildSettings>('GuildSettings', GuildSettingsSchema);
