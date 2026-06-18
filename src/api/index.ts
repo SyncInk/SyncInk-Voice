@@ -23,6 +23,8 @@ type SessionRecord = {
 
 type OAuthStateRecord = {
   createdAt: number;
+  dashboardUrl: string;
+  redirectUri: string;
 };
 
 type DiscordUser = {
@@ -47,6 +49,21 @@ type AuthenticatedRequest = Request & {
 
 const sessions = new Map<string, SessionRecord>();
 const oauthStates = new Map<string, OAuthStateRecord>();
+
+const getRequestOrigin = (req: Request) => {
+  const forwardedProtoHeader = req.headers['x-forwarded-proto'];
+  const forwardedProto = Array.isArray(forwardedProtoHeader)
+    ? forwardedProtoHeader[0]
+    : forwardedProtoHeader?.split(',')[0];
+  const protocol = forwardedProto?.trim() || req.protocol || 'http';
+  const host = req.headers.host;
+
+  if (!host) {
+    return ENV.API_BASE_URL || ENV.DASHBOARD_URL || `http://localhost:${ENV.PORT}`;
+  }
+
+  return `${protocol}://${host}`;
+};
 
 const cleanExpiredRecords = () => {
   const now = Date.now();
@@ -153,26 +170,26 @@ const userHasManageGuild = (guild: DiscordGuild) => {
   }
 };
 
-const createOAuthUrl = (state: string) => {
+const createOAuthUrl = (state: string, redirectUri: string) => {
   const params = new URLSearchParams({
     client_id: ENV.CLIENT_ID,
-    redirect_uri: `${ENV.API_BASE_URL}/api/auth/discord/callback`,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'identify guilds',
-    prompt: 'none',
+    prompt: 'consent',
     state,
   });
 
   return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
 };
 
-const exchangeDiscordCode = async (code: string) => {
+const exchangeDiscordCode = async (code: string, redirectUri: string) => {
   const body = new URLSearchParams({
     client_id: ENV.CLIENT_ID,
     client_secret: ENV.CLIENT_SECRET,
     grant_type: 'authorization_code',
     code,
-    redirect_uri: `${ENV.API_BASE_URL}/api/auth/discord/callback`,
+    redirect_uri: redirectUri,
   });
 
   const response = await fetch('https://discord.com/api/oauth2/token', {
@@ -338,16 +355,18 @@ const getActiveRooms = async (guild: Guild) => {
 
 export const startApi = (bot: SyncinkBot) => {
   const app = express();
-  const allowedOrigins = new Set<string>([
-    ENV.DASHBOARD_URL,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-  ]);
+  const allowedOrigins = new Set<string>(['http://localhost:5173', 'http://127.0.0.1:5173']);
+  if (ENV.DASHBOARD_URL) {
+    allowedOrigins.add(ENV.DASHBOARD_URL);
+  }
+  if (ENV.API_BASE_URL) {
+    allowedOrigins.add(ENV.API_BASE_URL);
+  }
 
   app.use(
     cors({
       origin(origin, callback) {
-        if (!origin || allowedOrigins.has(origin)) {
+        if (!origin || allowedOrigins.has(origin) || (!ENV.DASHBOARD_URL && !ENV.API_BASE_URL)) {
           return callback(null, true);
         }
 
@@ -362,29 +381,41 @@ export const startApi = (bot: SyncinkBot) => {
     res.json({ ok: true, uptime: process.uptime() });
   });
 
-  app.get('/api/auth/discord/login', (_req, res) => {
+  app.get('/api/auth/discord/login', (req, res) => {
     if (!ENV.CLIENT_ID || !ENV.CLIENT_SECRET) {
       return res.status(500).json({ error: 'Discord OAuth is not configured.' });
     }
 
     cleanExpiredRecords();
     const state = crypto.randomBytes(24).toString('hex');
-    oauthStates.set(state, { createdAt: Date.now() });
-    res.redirect(createOAuthUrl(state));
+    const requestOrigin = getRequestOrigin(req);
+    const dashboardUrl = ENV.DASHBOARD_URL || requestOrigin;
+    const redirectUri = `${ENV.API_BASE_URL || requestOrigin}/api/auth/discord/callback`;
+
+    oauthStates.set(state, {
+      createdAt: Date.now(),
+      dashboardUrl,
+      redirectUri,
+    });
+
+    res.redirect(createOAuthUrl(state, redirectUri));
   });
 
   app.get('/api/auth/discord/callback', async (req, res) => {
     const code = typeof req.query.code === 'string' ? req.query.code : null;
     const state = typeof req.query.state === 'string' ? req.query.state : null;
 
-    if (!code || !state || !oauthStates.has(state)) {
-      return res.redirect(`${ENV.DASHBOARD_URL}?login=failed`);
+    const stateRecord = state ? oauthStates.get(state) : null;
+    const fallbackDashboardUrl = ENV.DASHBOARD_URL || getRequestOrigin(req);
+
+    if (!code || !state || !stateRecord) {
+      return res.redirect(`${fallbackDashboardUrl}?login=failed`);
     }
 
     oauthStates.delete(state);
 
     try {
-      const accessToken = await exchangeDiscordCode(code);
+      const accessToken = await exchangeDiscordCode(code, stateRecord.redirectUri);
       const user = await fetchDiscordUser(accessToken);
       const sessionId = crypto.randomBytes(32).toString('hex');
 
@@ -397,15 +428,15 @@ export const startApi = (bot: SyncinkBot) => {
       res.cookie(SESSION_COOKIE_NAME, sessionId, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: isHttpsUrl(ENV.DASHBOARD_URL),
+        secure: isHttpsUrl(stateRecord.dashboardUrl),
         maxAge: SESSION_TTL_MS,
         path: '/',
       });
 
-      return res.redirect(`${ENV.DASHBOARD_URL}?login=success`);
+      return res.redirect(`${stateRecord.dashboardUrl}?login=success`);
     } catch (error) {
       console.error('[API] Discord OAuth callback failed:', error);
-      return res.redirect(`${ENV.DASHBOARD_URL}?login=failed`);
+      return res.redirect(`${fallbackDashboardUrl}?login=failed`);
     }
   });
 
@@ -431,7 +462,7 @@ export const startApi = (bot: SyncinkBot) => {
     res.clearCookie(SESSION_COOKIE_NAME, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: isHttpsUrl(ENV.DASHBOARD_URL),
+      secure: isHttpsUrl(ENV.DASHBOARD_URL || ENV.API_BASE_URL),
       path: '/',
     });
 

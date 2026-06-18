@@ -7,7 +7,7 @@ export const ENV = {
   CLIENT_SECRET: process.env.CLIENT_SECRET || '',
   MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/syncink',
   PORT: process.env.PORT || 3000,
-  API_BASE_URL: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
-  DASHBOARD_URL: process.env.DASHBOARD_URL || 'https://syncink.app',
+  API_BASE_URL: process.env.API_BASE_URL || '',
+  DASHBOARD_URL: process.env.DASHBOARD_URL || '',
   BRAND_COLOR: parseInt(process.env.BRAND_COLOR || '8B5CF6', 16),
 };
