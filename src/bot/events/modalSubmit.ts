@@ -86,16 +86,6 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       });
     }
 
-    if (interaction.customId === 'modal_region') {
-      const regionInput = interaction.fields.getTextInputValue('input_region').trim().toLowerCase();
-      const region = ['auto', 'automatic', 'default', 'none'].includes(regionInput) ? null : regionInput;
-      await channel.setRTCRegion(region);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('Voice region updated', `Region: ${region || 'Automatic'}`)],
-        ephemeral: true,
-      });
-    }
-
     if (interaction.customId === 'modal_opt_transfer') {
       const targetId = interaction.fields.getTextInputValue('input_userid').trim();
       const targetMember = interaction.guild?.members.cache.get(targetId);

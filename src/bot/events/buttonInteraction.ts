@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
-import { buildRoomEmbed, ensureRoomTextChannel, formatRoomName } from '../utils/tempRoom';
+import { buildRoomEmbed, formatRoomName, toTextChannelName } from '../utils/tempRoom';
 
 export const handleButtonInteraction = async (interaction: ButtonInteraction) => {
   const member = interaction.guild?.members.cache.get(interaction.user.id);
@@ -61,9 +61,15 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       if (profile.defaultName) {
         const newName = formatRoomName(profile.defaultName, member);
         await channel.setName(newName);
-        const textChannel = await ensureRoomTextChannel(channel, tempChannel, 'Loaded saved room name');
-        await textChannel.setName(`chat-${newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room'}`);
-        applied.push(`Name: ${newName} (voice + text: ${textChannel.name})`);
+        applied.push(`Name: ${newName}`);
+
+        if (tempChannel.textChannelId) {
+          const textChannel = interaction.guild?.channels.cache.get(tempChannel.textChannelId);
+          if (textChannel?.isTextBased()) {
+            await textChannel.setName(toTextChannelName(newName));
+            applied[0] = `Name: ${newName} (voice + text: ${textChannel.name})`;
+          }
+        }
       }
 
       if (profile.defaultLimit !== null && profile.defaultLimit !== undefined) {

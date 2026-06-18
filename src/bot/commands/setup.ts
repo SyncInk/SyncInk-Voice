@@ -2,13 +2,14 @@ import {
   CategoryChannel,
   ChannelType,
   ChatInputCommandInteraction,
+  GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
   TextChannel,
   VoiceChannel,
 } from 'discord.js';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildEmbed } from '../utils/embed';
+import { buildControlPanelEmbed } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { ENV } from '../../config/config';
 
@@ -86,14 +87,13 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       { upsert: true, new: true },
     );
 
-    const embed = buildEmbed()
-      .setTitle('Welcome to your temporary voice channel')
-      .setDescription(
-        `Control your channel using the menus below.\n` +
-          `- Use the dropdowns to manage settings and permissions\n` +
-          `- Alternatively use \`/voice\` commands\n` +
-          `- Manage synced defaults in the dashboard: ${ENV.DASHBOARD_URL}`,
-      );
+    const panelMember = interaction.guild.members.cache.get(interaction.user.id) as GuildMember | undefined;
+    if (!panelMember) {
+      await interaction.editReply({ content: 'Could not resolve your guild member data.' });
+      return;
+    }
+
+    const embed = buildControlPanelEmbed(panelMember, ENV.DASHBOARD_URL || undefined);
 
     const components = [...getPanelButtons(), ...getPanelDropdowns()];
     await controlChannel.send({ embeds: [embed], components });

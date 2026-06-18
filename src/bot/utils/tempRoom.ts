@@ -53,6 +53,68 @@ export const getCurrentGameName = (member: GuildMember) => {
   return activity?.name?.slice(0, 80) || null;
 };
 
+export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: string) =>
+  new EmbedBuilder()
+    .setColor(ENV.BRAND_COLOR)
+    .setAuthor({
+      name: `${member.displayName} APP`,
+      iconURL: member.user.displayAvatarURL({ size: 64 }),
+    })
+    .setThumbnail(member.user.displayAvatarURL({ size: 128 }))
+    .setTitle('Welcome to your own temporary voice channel')
+    .setDescription(
+      [
+        'Control your channel using the menus below.',
+        '• Use the dropdowns to manage settings and permissions',
+        '• Alternatively use `/voice` commands',
+        '• Use `/toggle set` to disable this interface',
+        '',
+        'Create a user profile on the dashboard, then use Load Settings below to apply your saved settings to this channel.',
+      ].join('\n'),
+    )
+    .addFields(
+      {
+        name: 'Channel Settings',
+        value: 'Change the channel name, limit, status, game, bitrate, region, text, and NSFW.',
+      },
+      {
+        name: 'Channel Permissions',
+        value: 'Lock, unlock, permit, reject, invite, ghost, unghost, and transfer ownership.',
+      },
+    )
+    .setFooter({
+      text: dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Use Load Settings to apply your saved preferences.',
+    });
+
+export const buildLookingForMembersEmbed = (
+  member: GuildMember,
+  channelName: string,
+  memberCount: number,
+  limit: number,
+) =>
+  new EmbedBuilder()
+    .setColor(ENV.BRAND_COLOR)
+    .setAuthor({
+      name: member.displayName,
+      iconURL: member.user.displayAvatarURL({ size: 64 }),
+    })
+    .setTitle('Looking for members')
+    .setDescription(`**${channelName}** is looking for more members.`)
+    .addFields(
+      {
+        name: 'Channel',
+        value: channelName,
+        inline: true,
+      },
+      {
+        name: 'Members',
+        value: `${memberCount}${limit ? ` / ${limit}` : ''}`,
+        inline: true,
+      },
+    )
+    .setFooter({ text: 'Looking for members' })
+    .setTimestamp();
+
 export const ensureRoomTextChannel = async (
   voiceChannel: VoiceChannel,
   tempChannel: ITempChannel,
@@ -75,6 +137,10 @@ export const ensureRoomTextChannel = async (
         .catch(() => null);
     }
 
+    if (tempChannel.isNsfw) {
+      await textChannel.setNSFW(true).catch(() => null);
+    }
+
     return textChannel;
   }
 
@@ -83,6 +149,7 @@ export const ensureRoomTextChannel = async (
     type: ChannelType.GuildText,
     parent: voiceChannel.parentId,
     reason,
+    nsfw: Boolean(tempChannel.isNsfw),
     permissionOverwrites: [
       {
         id: guild.roles.everyone.id,
@@ -98,6 +165,10 @@ export const ensureRoomTextChannel = async (
       })),
     ],
   });
+
+  if (tempChannel.isNsfw) {
+    await textChannel.setNSFW(true).catch(() => null);
+  }
 
   tempChannel.textChannelId = textChannel.id;
   await tempChannel.save();

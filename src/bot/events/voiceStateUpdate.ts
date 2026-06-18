@@ -3,10 +3,9 @@ import { SyncinkBot } from '../bot';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
-import { buildEmbed } from '../utils/embed';
+import { buildControlPanelEmbed, formatRoomName } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { ENV } from '../../config/config';
-import { ensureRoomTextChannel, formatRoomName } from '../utils/tempRoom';
 
 export const handleVoiceStateUpdate = async (
   _client: SyncinkBot,
@@ -19,12 +18,13 @@ export const handleVoiceStateUpdate = async (
 
   const guildId = newState.guild.id || oldState.guild.id;
   const member = newState.member || oldState.member;
+
   if (!member || member.user.bot) {
     return;
   }
 
   const settings = await GuildSettings.findOne({ guildId });
-  if (!settings || !settings.setupChannelId) {
+  if (!settings?.setupChannelId) {
     return;
   }
 
@@ -62,15 +62,7 @@ export const handleVoiceStateUpdate = async (
         bitrate: newChannel.bitrate,
       });
 
-      const embed = buildEmbed()
-        .setTitle('Welcome to your temporary voice channel')
-        .setDescription(
-          `Control your channel using the menus below.\n` +
-            `- Use the dropdowns to manage settings and permissions\n` +
-            `- Alternatively use \`/voice\` commands\n` +
-            `- Open the dashboard to sync your defaults instantly: ${ENV.DASHBOARD_URL}`,
-        );
-
+      const embed = buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined);
       const components = [...getPanelButtons(), ...getPanelDropdowns()];
       await newChannel.send({ content: `<@${member.id}>`, embeds: [embed], components });
     } catch (error) {
@@ -79,29 +71,23 @@ export const handleVoiceStateUpdate = async (
   }
 
   if (newState.channelId) {
-    const tempChanData = await TempChannel.findOne({ channelId: newState.channelId });
+    const tempChannel = await TempChannel.findOne({ channelId: newState.channelId });
     const voiceChannel = newState.guild.channels.cache.get(newState.channelId) as VoiceChannel | undefined;
-    if (tempChanData && voiceChannel?.isVoiceBased()) {
-      if (tempChanData.textChannelId) {
-        const textChannel = newState.guild.channels.cache.get(tempChanData.textChannelId) as TextChannel | undefined;
-        if (textChannel) {
-          await textChannel.permissionOverwrites.edit(member.id, {
-            ViewChannel: true,
-            SendMessages: true,
-            ReadMessageHistory: true,
-          });
-        }
-      } else {
-        await ensureRoomTextChannel(voiceChannel, tempChanData).catch((error) => {
-          console.error('[VoiceState] Failed to create synced text channel:', error);
-        });
+
+    if (tempChannel && voiceChannel?.isVoiceBased() && tempChannel.textChannelId) {
+      const textChannel = newState.guild.channels.cache.get(tempChannel.textChannelId) as TextChannel | undefined;
+      if (textChannel) {
+        await textChannel.permissionOverwrites.edit(member.id, {
+          ViewChannel: true,
+          SendMessages: true,
+          ReadMessageHistory: true,
+        }).catch(() => null);
       }
     }
   }
 
   if (oldState.channelId) {
     const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId });
-
     if (tempChannelData?.textChannelId) {
       const textChannel = oldState.guild.channels.cache.get(tempChannelData.textChannelId) as TextChannel | undefined;
       if (textChannel) {

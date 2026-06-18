@@ -1,7 +1,10 @@
 import {
   ActionRowBuilder,
+  ChannelType,
   MentionableSelectMenuBuilder,
   ModalBuilder,
+  GuildMember,
+  StringSelectMenuBuilder,
   StringSelectMenuInteraction,
   TextInputBuilder,
   TextInputStyle,
@@ -10,10 +13,27 @@ import {
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import {
+  buildControlPanelEmbed,
+  buildLookingForMembersEmbed,
   buildRoomEmbed,
-  ensureRoomTextChannel,
   getCurrentGameName,
 } from '../utils/tempRoom';
+import { getPanelButtons, getPanelDropdowns } from '../utils/components';
+import { ENV } from '../../config/config';
+
+const REGION_OPTIONS = [
+  { label: 'Automatic', value: 'automatic', emoji: '🌐' },
+  { label: 'Brazil', value: 'brazil', emoji: '🇧🇷' },
+  { label: 'Hong Kong', value: 'hongkong', emoji: '🇭🇰' },
+  { label: 'India', value: 'india', emoji: '🇮🇳' },
+  { label: 'Japan', value: 'japan', emoji: '🇯🇵' },
+  { label: 'Singapore', value: 'singapore', emoji: '🇸🇬' },
+  { label: 'Sydney', value: 'sydney', emoji: '🇦🇺' },
+  { label: 'US Central', value: 'us-central', emoji: '🇺🇸' },
+  { label: 'US East', value: 'us-east', emoji: '🇺🇸' },
+  { label: 'US South', value: 'us-south', emoji: '🇺🇸' },
+  { label: 'US West', value: 'us-west', emoji: '🇺🇸' },
+] as const;
 
 const showTextModal = (
   interaction: StringSelectMenuInteraction,
@@ -39,6 +59,30 @@ const showTextModal = (
   return interaction.showModal(modal);
 };
 
+const freshControlPanel = (member: GuildMember) => ({
+  embeds: [buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined)],
+  components: [...getPanelButtons(), ...getPanelDropdowns()],
+});
+
+const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
+  const regionMenu = new StringSelectMenuBuilder()
+    .setCustomId('menu_region')
+    .setPlaceholder('Select a voice region')
+    .addOptions(
+      REGION_OPTIONS.map((option) => ({
+        label: option.label,
+        value: option.value,
+        emoji: option.emoji,
+      })),
+    );
+
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionMenu);
+  return interaction.update({
+    embeds: [buildRoomEmbed('Select a voice region', 'Choose one of the supported regions below.')],
+    components: [row],
+  });
+};
+
 export const handleSelectMenuInteraction = async (interaction: StringSelectMenuInteraction) => {
   const member = interaction.guild?.members.cache.get(interaction.user.id);
   if (!member || !member.voice.channelId) {
@@ -56,7 +100,6 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     });
   }
 
-  const value = interaction.values[0];
   const channel = interaction.guild?.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!channel) {
     return interaction.reply({
@@ -65,16 +108,39 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     });
   }
 
+  if (interaction.customId === 'menu_region') {
+    const value = interaction.values[0];
+    const region = value === 'automatic' ? null : value;
+    await channel.setRTCRegion(region);
+    await interaction.update(freshControlPanel(member));
+    await interaction.followUp({
+      embeds: [
+        buildRoomEmbed(
+          'Voice region updated',
+          `Region: ${value === 'automatic' ? 'Automatic' : REGION_OPTIONS.find((option) => option.value === value)?.label || value}`,
+        ),
+      ],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const value = interaction.values[0];
+
+  if (interaction.customId === 'menu_settings' && value === 'opt_region') {
+    return showRegionMenu(interaction);
+  }
+
   if (value === 'opt_claim') {
     if (tempChannel.ownerId === interaction.user.id) {
-      return interaction.reply({
+      return interaction.followUp({
         embeds: [buildRoomEmbed('Already owner', 'You are already the owner of this voice channel.')],
         ephemeral: true,
       });
     }
 
     if (channel.members.has(tempChannel.ownerId)) {
-      return interaction.reply({
+      return interaction.followUp({
         embeds: [buildRoomEmbed('Owner is still here', 'You can only claim this room after the current owner leaves.')],
         ephemeral: true,
       });
@@ -82,9 +148,12 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
     tempChannel.ownerId = interaction.user.id;
     await tempChannel.save();
-    return interaction.reply({
+    await interaction.update(freshControlPanel(member));
+    await interaction.followUp({
       embeds: [buildRoomEmbed('Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+      ephemeral: true,
     });
+    return;
   }
 
   if (tempChannel.ownerId !== interaction.user.id) {
@@ -107,94 +176,149 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     case 'opt_bitrate':
       return showTextModal(interaction, 'modal_bitrate', 'Change Bitrate', 'input_bitrate', 'Bitrate in kbps', '8 - 384');
 
-    case 'opt_region':
-      return showTextModal(interaction, 'modal_region', 'Set Voice Region', 'input_region', 'Region or auto', 'auto, india, singapore, us-west');
-
     case 'opt_game': {
       const gameName = getCurrentGameName(member);
       if (!gameName) {
-        return interaction.reply({
+        await interaction.update(freshControlPanel(member));
+        await interaction.followUp({
           embeds: [
             buildRoomEmbed(
               'No game detected',
-              'I could not see a current game activity for you. Enable Presence Intent in the Discord Developer Portal and make sure your activity is visible.',
+              'I could not see a current game activity for you. Enable the Presence Intent in the Discord Developer Portal if you want automatic game renaming.',
             ),
           ],
           ephemeral: true,
         });
+        return;
       }
 
       await channel.setName(gameName);
-      return interaction.reply({
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({
         embeds: [buildRoomEmbed('Channel renamed', `Name: ${gameName}`)],
         ephemeral: true,
       });
+      return;
     }
 
     case 'opt_text': {
-      const textChannel = await ensureRoomTextChannel(channel, tempChannel);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('Text channel ready', `Text channel: ${textChannel}`)],
+      await interaction.deferUpdate();
+      await interaction.editReply(freshControlPanel(member));
+      await interaction.followUp({
+        embeds: [buildRoomEmbed('Text channel', 'Use the `/voice text` command or the dashboard toggle to create a text channel when you need one.')],
         ephemeral: true,
       });
+      return;
     }
 
     case 'opt_lfm': {
       const settings = await GuildSettings.findOne({ guildId: interaction.guildId });
-      const targetChannel = settings?.voiceControlChannelId
-        ? interaction.guild?.channels.cache.get(settings.voiceControlChannelId)
+      const textTarget = tempChannel.textChannelId
+        ? interaction.guild?.channels.cache.get(tempChannel.textChannelId)
         : null;
-      const textTarget = targetChannel?.isTextBased() ? targetChannel : await ensureRoomTextChannel(channel, tempChannel);
-      await textTarget.send({
+      const roomText = textTarget?.isTextBased() ? textTarget : null;
+
+      if (!roomText) {
+        await interaction.update(freshControlPanel(member));
+        await interaction.followUp({
+          embeds: [
+            buildRoomEmbed(
+              'Text channel required',
+              'Create a temporary text channel first, then post the LFM message there.',
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await roomText.send({
         embeds: [
-          buildRoomEmbed(
-            'Looking for members',
-            `<@${interaction.user.id}> is looking for members in ${channel}.\nLimit: ${channel.userLimit || 'Unlimited'}\nConnected: ${channel.members.size}`,
+          buildLookingForMembersEmbed(
+            member,
+            channel.name,
+            channel.members.size,
+            channel.userLimit,
           ),
         ],
       });
 
-      return interaction.reply({
-        embeds: [buildRoomEmbed('LFM posted', `Posted a looking-for-members message in ${textTarget}.`)],
+      if (settings?.voiceControlChannelId) {
+        const controlChannel = interaction.guild?.channels.cache.get(settings.voiceControlChannelId);
+        if (controlChannel?.isTextBased()) {
+          await controlChannel.send({
+            embeds: [
+              buildLookingForMembersEmbed(
+                member,
+                channel.name,
+                channel.members.size,
+                channel.userLimit,
+              ),
+            ],
+          }).catch(() => null);
+        }
+      }
+
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({
+        embeds: [buildRoomEmbed('LFM posted', `Posted a looking-for-members message in ${roomText}.`)],
         ephemeral: true,
       });
+      return;
     }
 
     case 'opt_nsfw': {
-      const textChannel = await ensureRoomTextChannel(channel, tempChannel);
-      const nextValue = !textChannel.nsfw;
-      await textChannel.setNSFW(nextValue, 'Temporary room NSFW toggle');
+      const nextValue = !tempChannel.isNsfw;
       tempChannel.isNsfw = nextValue;
       await tempChannel.save();
-      return interaction.reply({
-        embeds: [buildRoomEmbed(nextValue ? 'NSFW enabled' : 'NSFW disabled', `Updated ${textChannel}.`)],
+      await channel.setNSFW(nextValue).catch(() => null);
+
+      if (tempChannel.textChannelId) {
+        const textChannel = interaction.guild?.channels.cache.get(tempChannel.textChannelId);
+        if (textChannel?.type === ChannelType.GuildText) {
+          await textChannel.setNSFW(nextValue).catch(() => null);
+        }
+      }
+
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({
+        embeds: [buildRoomEmbed(nextValue ? 'NSFW enabled' : 'NSFW disabled', 'Applied to the voice channel and any linked text channel.')],
         ephemeral: true,
       });
+      return;
     }
 
     case 'opt_lock':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { Connect: false });
       tempChannel.isLocked = true;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Room locked')], ephemeral: true });
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({ embeds: [buildRoomEmbed('Channel locked')], ephemeral: true });
+      return;
 
     case 'opt_unlock':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { Connect: null });
       tempChannel.isLocked = false;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Room unlocked')], ephemeral: true });
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({ embeds: [buildRoomEmbed('Channel unlocked')], ephemeral: true });
+      return;
 
     case 'opt_hide':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { ViewChannel: false });
       tempChannel.isHidden = true;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Room hidden')], ephemeral: true });
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({ embeds: [buildRoomEmbed('Channel hidden')], ephemeral: true });
+      return;
 
     case 'opt_unhide':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { ViewChannel: null });
       tempChannel.isHidden = false;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Room visible')], ephemeral: true });
+      await interaction.update(freshControlPanel(member));
+      await interaction.followUp({ embeds: [buildRoomEmbed('Channel visible')], ephemeral: true });
+      return;
 
     case 'opt_permit':
     case 'opt_reject':
