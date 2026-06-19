@@ -1,4 +1,5 @@
 import { LogOut } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 
 interface TopbarProps {
   user?: { username: string; avatarUrl?: string; globalName?: string | null; id?: string };
@@ -10,9 +11,10 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
   return (
     <header className="topbar">
       <nav className="topbar-nav">
-        <a href="https://discord.gg/" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
-        <a href="/guide" className="topbar-link">Guide</a>
-        <a href="/" className="topbar-link active">Dashboard</a>
+        <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
+        <NavLink to="/invite" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Invite Bot</NavLink>
+        <NavLink to="/guide" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Guide</NavLink>
+        <NavLink to="/" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
       </nav>
       <div className="topbar-right">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -21,7 +23,10 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
               ? <img src={user.avatarUrl} alt={displayName} />
               : displayName[0]?.toUpperCase()}
           </div>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{displayName}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, lineHeight: 1 }}>{displayName}</span>
+            {user?.username && <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1, marginTop: 4 }}>@{user.username}</span>}
+          </div>
           {onLogout && (
             <button
               onClick={onLogout}
