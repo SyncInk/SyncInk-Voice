@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, Wrench, User, Globe,
   Monitor, BookOpen, ChevronDown, RefreshCw, Mic2,
-  Crown, Lock
+  Crown, Lock, Plus
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -45,6 +45,7 @@ const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Member: false },
   '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
   '/global-profile': { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
+  '/invite':         { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
   '/guide':          { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
 };
 
@@ -169,6 +170,7 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
 
       <div className="sidebar-section">
         <div className="sidebar-section-title">Help</div>
+        <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} />
         <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} />
       </div>
 

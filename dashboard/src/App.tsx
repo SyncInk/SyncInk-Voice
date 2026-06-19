@@ -15,6 +15,7 @@ import BotProfile from './pages/BotProfile';
 import GlobalProfile from './pages/GlobalProfile';
 import Interface, { applyPrefs } from './pages/Interface';
 import Guide from './pages/Guide';
+import InviteBot from './pages/InviteBot';
 import type { Guild } from './types';
 
 import './index.css';
@@ -88,6 +89,7 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
             <Route path="/bot-profile" element={<motion.div key="bp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><BotProfile guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div>} />
             <Route path="/global-profile" element={<motion.div key="gp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><GlobalProfile addToast={addToast} /></motion.div>} />
             <Route path="/interface" element={<motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Interface addToast={addToast} /></motion.div>} />
+            <Route path="/invite" element={<motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><InviteBot /></motion.div>} />
             <Route path="/guide" element={<motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
