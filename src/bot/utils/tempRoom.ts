@@ -28,15 +28,15 @@ export const formatRoomName = (template: string, member: GuildMember) => {
     .slice(0, 100);
 };
 
-export const toTextChannelName = (roomName: string) => {
-  const normalized = roomName
+// Produces: 💬-ownername-chat  (e.g. 💬-syncink-chat)
+export const toTextChannelName = (ownerName: string) => {
+  const normalized = ownerName
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
-    .slice(0, 80);
-
-  return `chat-${normalized || 'room'}`;
+    .slice(0, 50);
+  return `💬-${normalized || 'room'}-chat`;
 };
 
 export const buildRoomEmbed = (title: string, description?: string) => {
@@ -57,33 +57,21 @@ export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: strin
   new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
-      name: `${member.displayName} APP`,
+      name: `${member.displayName}'s Room`,
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
     .setThumbnail(member.user.displayAvatarURL({ size: 128 }))
-    .setTitle('Welcome to your own temporary voice channel')
+    .setTitle('🎙️ Your Temporary Voice Channel')
     .setDescription(
       [
-        'Control your channel using the menus below.',
-        '• Use the dropdowns to manage settings and permissions',
-        '• Alternatively use `/voice` commands',
-        '• Use `/toggle set` to disable this interface',
+        'Welcome! Use the menus below to control your channel.',
         '',
-        'Create a user profile on the dashboard, then use Load Settings below to apply your saved settings to this channel.',
+        '**Room Settings** — Name, limit, status, game, bitrate, region, text, NSFW',
+        '**Permissions** — Lock, permit, reject, ghost, transfer ownership',
       ].join('\n'),
     )
-    .addFields(
-      {
-        name: 'Channel Settings',
-        value: 'Change the channel name, limit, status, game, bitrate, region, text, and NSFW.',
-      },
-      {
-        name: 'Channel Permissions',
-        value: 'Lock, unlock, permit, reject, invite, ghost, unghost, and transfer ownership.',
-      },
-    )
     .setFooter({
-      text: dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Use Load Settings to apply your saved preferences.',
+      text: dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Syncink Voice • Temporary Voice Channels',
     });
 
 export const buildLookingForMembersEmbed = (
@@ -119,6 +107,7 @@ export const ensureRoomTextChannel = async (
   voiceChannel: VoiceChannel,
   tempChannel: ITempChannel,
   reason = 'Temporary voice room chat',
+  ownerName?: string,
 ) => {
   const guild = voiceChannel.guild;
   const existing = tempChannel.textChannelId
@@ -144,8 +133,10 @@ export const ensureRoomTextChannel = async (
     return textChannel;
   }
 
+  const channelName = toTextChannelName(ownerName || voiceChannel.name);
+
   const textChannel = await guild.channels.create({
-    name: toTextChannelName(voiceChannel.name),
+    name: channelName,
     type: ChannelType.GuildText,
     parent: voiceChannel.parentId,
     reason,

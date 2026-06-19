@@ -17,6 +17,8 @@ import {
   buildLookingForMembersEmbed,
   buildRoomEmbed,
   getCurrentGameName,
+  ensureRoomTextChannel,
+  getDisplayNameParts,
 } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { ENV } from '../../config/config';
@@ -64,6 +66,7 @@ const freshControlPanel = (member: GuildMember) => ({
   components: [...getPanelButtons(), ...getPanelDropdowns()],
 });
 
+// Region menu is shown as EPHEMERAL so the main control panel is NEVER replaced/removed
 const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
   const regionMenu = new StringSelectMenuBuilder()
     .setCustomId('menu_region')
@@ -77,9 +80,10 @@ const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionMenu);
-  return interaction.update({
-    embeds: [buildRoomEmbed('Select a voice region', 'Choose one of the supported regions below.')],
+  return interaction.reply({
+    embeds: [buildRoomEmbed('🌐 Select Voice Region', 'Choose a region for your voice channel. The panel will stay open.')],
     components: [row],
+    ephemeral: true,
   });
 };
 
@@ -108,19 +112,17 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     });
   }
 
+  // menu_region comes from an ephemeral reply — update that ephemeral with confirmation
   if (interaction.customId === 'menu_region') {
     const value = interaction.values[0];
     const region = value === 'automatic' ? null : value;
     await channel.setRTCRegion(region);
-    await interaction.update(freshControlPanel(member));
-    await interaction.followUp({
-      embeds: [
-        buildRoomEmbed(
-          'Voice region updated',
-          `Region: ${value === 'automatic' ? 'Automatic' : REGION_OPTIONS.find((option) => option.value === value)?.label || value}`,
-        ),
-      ],
-      ephemeral: true,
+    const label = value === 'automatic'
+      ? 'Automatic'
+      : REGION_OPTIONS.find((option) => option.value === value)?.label || value;
+    await interaction.update({
+      embeds: [buildRoomEmbed('✅ Voice region updated', `Region set to: **${label}**`)],
+      components: [],
     });
     return;
   }
@@ -133,14 +135,14 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
   if (value === 'opt_claim') {
     if (tempChannel.ownerId === interaction.user.id) {
-      return interaction.followUp({
+      return interaction.reply({
         embeds: [buildRoomEmbed('Already owner', 'You are already the owner of this voice channel.')],
         ephemeral: true,
       });
     }
 
     if (channel.members.has(tempChannel.ownerId)) {
-      return interaction.followUp({
+      return interaction.reply({
         embeds: [buildRoomEmbed('Owner is still here', 'You can only claim this room after the current owner leaves.')],
         ephemeral: true,
       });
@@ -150,7 +152,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     await tempChannel.save();
     await interaction.update(freshControlPanel(member));
     await interaction.followUp({
-      embeds: [buildRoomEmbed('Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+      embeds: [buildRoomEmbed('✅ Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
       ephemeral: true,
     });
     return;
@@ -168,7 +170,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       return showTextModal(interaction, 'modal_rename', 'Rename Channel', 'input_name', 'New channel name');
 
     case 'opt_status':
-      return showTextModal(interaction, 'modal_status', 'Set Channel Status', 'input_status', 'Status text');
+      return showTextModal(interaction, 'modal_status', 'Set Voice Status', 'input_status', 'Status text (shown under channel name)', 'e.g. Chilling 🎮');
 
     case 'opt_limit':
       return showTextModal(interaction, 'modal_limit', 'Set User Limit', 'input_limit', 'Max users', '0 for unlimited');
@@ -181,12 +183,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       if (!gameName) {
         await interaction.update(freshControlPanel(member));
         await interaction.followUp({
-          embeds: [
-            buildRoomEmbed(
-              'No game detected',
-              'I could not see a current game activity for you. Enable the Presence Intent in the Discord Developer Portal if you want automatic game renaming.',
-            ),
-          ],
+          embeds: [buildRoomEmbed('No game detected', 'I could not see a current game activity for you.')],
           ephemeral: true,
         });
         return;
@@ -195,7 +192,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       await channel.setName(gameName);
       await interaction.update(freshControlPanel(member));
       await interaction.followUp({
-        embeds: [buildRoomEmbed('Channel renamed', `Name: ${gameName}`)],
+        embeds: [buildRoomEmbed('✅ Channel renamed', `Name: ${gameName}`)],
         ephemeral: true,
       });
       return;
@@ -203,9 +200,11 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
     case 'opt_text': {
       await interaction.deferUpdate();
+      const ownerName = getDisplayNameParts(member);
+      const textCh = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', ownerName);
       await interaction.editReply(freshControlPanel(member));
       await interaction.followUp({
-        embeds: [buildRoomEmbed('Text channel', 'Use the `/voice text` command or the dashboard toggle to create a text channel when you need one.')],
+        embeds: [buildRoomEmbed('💬 Text channel created', `Your private text channel ${textCh} has been created!\nOnly members in your voice channel can see it.`)],
         ephemeral: true,
       });
       return;
@@ -221,47 +220,28 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       if (!roomText) {
         await interaction.update(freshControlPanel(member));
         await interaction.followUp({
-          embeds: [
-            buildRoomEmbed(
-              'Text channel required',
-              'Create a temporary text channel first, then post the LFM message there.',
-            ),
-          ],
+          embeds: [buildRoomEmbed('Text channel required', 'Create a text channel first using the **Text** option, then post an LFM message.')],
           ephemeral: true,
         });
         return;
       }
 
       await roomText.send({
-        embeds: [
-          buildLookingForMembersEmbed(
-            member,
-            channel.name,
-            channel.members.size,
-            channel.userLimit,
-          ),
-        ],
+        embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)],
       });
 
       if (settings?.voiceControlChannelId) {
         const controlChannel = interaction.guild?.channels.cache.get(settings.voiceControlChannelId);
         if (controlChannel?.isTextBased()) {
           await controlChannel.send({
-            embeds: [
-              buildLookingForMembersEmbed(
-                member,
-                channel.name,
-                channel.members.size,
-                channel.userLimit,
-              ),
-            ],
+            embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)],
           }).catch(() => null);
         }
       }
 
       await interaction.update(freshControlPanel(member));
       await interaction.followUp({
-        embeds: [buildRoomEmbed('LFM posted', `Posted a looking-for-members message in ${roomText}.`)],
+        embeds: [buildRoomEmbed('✅ LFM posted', `Posted a looking-for-members message in ${roomText}.`)],
         ephemeral: true,
       });
       return;
@@ -282,7 +262,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await interaction.update(freshControlPanel(member));
       await interaction.followUp({
-        embeds: [buildRoomEmbed(nextValue ? 'NSFW enabled' : 'NSFW disabled', 'Applied to the voice channel and any linked text channel.')],
+        embeds: [buildRoomEmbed(nextValue ? '🔞 NSFW enabled' : '✅ NSFW disabled')],
         ephemeral: true,
       });
       return;
@@ -293,7 +273,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = true;
       await tempChannel.save();
       await interaction.update(freshControlPanel(member));
-      await interaction.followUp({ embeds: [buildRoomEmbed('Channel locked')], ephemeral: true });
+      await interaction.followUp({ embeds: [buildRoomEmbed('🔒 Channel locked', 'No new users can join.')], ephemeral: true });
       return;
 
     case 'opt_unlock':
@@ -301,7 +281,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = false;
       await tempChannel.save();
       await interaction.update(freshControlPanel(member));
-      await interaction.followUp({ embeds: [buildRoomEmbed('Channel unlocked')], ephemeral: true });
+      await interaction.followUp({ embeds: [buildRoomEmbed('🔓 Channel unlocked', 'Users can freely join.')], ephemeral: true });
       return;
 
     case 'opt_hide':
@@ -309,7 +289,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isHidden = true;
       await tempChannel.save();
       await interaction.update(freshControlPanel(member));
-      await interaction.followUp({ embeds: [buildRoomEmbed('Channel hidden')], ephemeral: true });
+      await interaction.followUp({ embeds: [buildRoomEmbed('👻 Channel hidden', 'Your channel is now invisible.')], ephemeral: true });
       return;
 
     case 'opt_unhide':
@@ -317,7 +297,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isHidden = false;
       await tempChannel.save();
       await interaction.update(freshControlPanel(member));
-      await interaction.followUp({ embeds: [buildRoomEmbed('Channel visible')], ephemeral: true });
+      await interaction.followUp({ embeds: [buildRoomEmbed('👁️ Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
       return;
 
     case 'opt_permit':

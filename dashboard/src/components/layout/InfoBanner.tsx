@@ -7,8 +7,14 @@ export const InfoBanner = ({ message }: { message: string }) => {
   return (
     <div className="info-banner">
       <Info size={15} />
-      <span>{message} <a href="#">Support Server</a>.</span>
-      <button className="info-banner-close" onClick={() => setVisible(false)}><X size={14}/></button>
+      <span>
+        {message}{' '}
+        <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer">
+          Contact Support
+        </a>
+        {' '}or send us a message with your issue.
+      </span>
+      <button className="info-banner-close" onClick={() => setVisible(false)}><X size={14} /></button>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import {
   ActionRowBuilder,
   ButtonInteraction,
+  GuildMember,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -8,7 +9,27 @@ import {
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
-import { buildRoomEmbed, formatRoomName, toTextChannelName } from '../utils/tempRoom';
+import { buildControlPanelEmbed, buildRoomEmbed, formatRoomName, getDisplayNameParts, toTextChannelName } from '../utils/tempRoom';
+import { getPanelButtons, getPanelDropdowns } from '../utils/components';
+import { ENV } from '../../config/config';
+
+// Refresh the control panel message in the voice channel so select menus reset
+const refreshPanel = async (channel: VoiceChannel, member: GuildMember) => {
+  try {
+    const messages = await channel.messages.fetch({ limit: 15 });
+    const panelMsg = messages.find(
+      (m) => m.author.bot && m.embeds.length > 0 && m.components.length > 0,
+    );
+    if (panelMsg) {
+      await panelMsg.edit({
+        embeds: [buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined)],
+        components: [...getPanelButtons(), ...getPanelDropdowns()],
+      });
+    }
+  } catch {
+    // Best-effort — ignore failures silently
+  }
+};
 
 export const handleButtonInteraction = async (interaction: ButtonInteraction) => {
   const member = interaction.guild?.members.cache.get(interaction.user.id);
@@ -50,7 +71,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
           embeds: [
             buildRoomEmbed(
               'No saved preferences yet',
-              'Open the dashboard and save your personal room defaults, then try Load Settings again.',
+              'Open the dashboard and save your personal room defaults, then use Load Settings.',
             ),
           ],
           ephemeral: true,
@@ -66,8 +87,8 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
         if (tempChannel.textChannelId) {
           const textChannel = interaction.guild?.channels.cache.get(tempChannel.textChannelId);
           if (textChannel?.isTextBased()) {
-            await textChannel.setName(toTextChannelName(newName));
-            applied[0] = `Name: ${newName} (voice + text: ${textChannel.name})`;
+            const ownerName = getDisplayNameParts(member);
+            await textChannel.setName(toTextChannelName(ownerName));
           }
         }
       }
@@ -86,41 +107,51 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       }
 
       await tempChannel.save();
-
-      return interaction.reply({
+      await interaction.reply({
         embeds: [
           buildRoomEmbed(
-            `Successfully loaded ${applied.length} settings from your saved preferences`,
+            `✅ Applied ${applied.length} saved settings`,
             applied.join('\n'),
           ),
         ],
         ephemeral: true,
       });
+      // Refresh panel so dropdowns reset
+      refreshPanel(channel, member);
+      return;
     }
 
     case 'btn_lock':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { Connect: false });
       tempChannel.isLocked = true;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel locked')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('🔒 Channel locked', 'No new users can join.')], ephemeral: true });
+      refreshPanel(channel, member);
+      return;
 
     case 'btn_unlock':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { Connect: null });
       tempChannel.isLocked = false;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel unlocked')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('🔓 Channel unlocked', 'Users can freely join now.')], ephemeral: true });
+      refreshPanel(channel, member);
+      return;
 
     case 'btn_hide':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { ViewChannel: false });
       tempChannel.isHidden = true;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel hidden')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('👻 Channel hidden', 'Your channel is now invisible to others.')], ephemeral: true });
+      refreshPanel(channel, member);
+      return;
 
     case 'btn_unhide':
       await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { ViewChannel: null });
       tempChannel.isHidden = false;
       await tempChannel.save();
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel visible')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('👁️ Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
+      refreshPanel(channel, member);
+      return;
 
     case 'btn_rename': {
       const modal = new ModalBuilder().setCustomId('modal_rename').setTitle('Rename Channel');
@@ -157,7 +188,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_delete': {
-      await interaction.reply({ embeds: [buildRoomEmbed('Deleting channel...')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('🗑️ Deleting channel...')], ephemeral: true });
       if (tempChannel.textChannelId) {
         const textChannel = interaction.guild!.channels.cache.get(tempChannel.textChannelId);
         if (textChannel) {

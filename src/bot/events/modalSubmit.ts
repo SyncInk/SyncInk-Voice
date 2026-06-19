@@ -1,6 +1,6 @@
 import { ModalSubmitInteraction, VoiceChannel } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
-import { buildRoomEmbed, ensureRoomTextChannel } from '../utils/tempRoom';
+import { buildRoomEmbed } from '../utils/tempRoom';
 
 export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => {
   const member = interaction.guild?.members.cache.get(interaction.user.id);
@@ -32,19 +32,32 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       const newName = interaction.fields.getTextInputValue('input_name').trim().slice(0, 100);
       await channel.setName(newName);
       return interaction.reply({
-        embeds: [buildRoomEmbed('Channel renamed', `Name: ${newName}`)],
+        embeds: [buildRoomEmbed('✅ Channel renamed', `New name: **${newName}**`)],
         ephemeral: true,
       });
     }
 
     if (interaction.customId === 'modal_status') {
-      const status = interaction.fields.getTextInputValue('input_status').trim().slice(0, 100);
-      const textChannel = await ensureRoomTextChannel(channel, tempChannel, 'Temporary room status update');
-      await textChannel.setTopic(status);
+      const status = interaction.fields.getTextInputValue('input_status').trim().slice(0, 500);
+
+      // Set voice channel status using Discord REST API
+      try {
+        await interaction.client.rest.put(
+          `/channels/${channel.id}/voice-status`,
+          { body: { status } },
+        );
+      } catch {
+        // Fallback: try setStatus if available on the channel object
+        const vc = channel as VoiceChannel & { setStatus?: (s: string) => Promise<unknown> };
+        if (typeof vc.setStatus === 'function') {
+          await vc.setStatus(status).catch(() => null);
+        }
+      }
+
       tempChannel.status = status;
       await tempChannel.save();
       return interaction.reply({
-        embeds: [buildRoomEmbed('Status updated', `Status: ${status}`)],
+        embeds: [buildRoomEmbed('✅ Voice status updated', `Status: **${status}**`)],
         ephemeral: true,
       });
     }
@@ -62,7 +75,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.userLimit = limit;
       await tempChannel.save();
       return interaction.reply({
-        embeds: [buildRoomEmbed('User limit updated', `Limit: ${limit === 0 ? 'Unlimited' : limit}`)],
+        embeds: [buildRoomEmbed('✅ User limit updated', `Limit: ${limit === 0 ? 'Unlimited' : limit}`)],
         ephemeral: true,
       });
     }
@@ -81,7 +94,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.bitrate = finalBitrate;
       await tempChannel.save();
       return interaction.reply({
-        embeds: [buildRoomEmbed('Bitrate updated', `Bitrate: ${Math.round(finalBitrate / 1000)} kbps`)],
+        embeds: [buildRoomEmbed('✅ Bitrate updated', `Bitrate: **${Math.round(finalBitrate / 1000)} kbps**`)],
         ephemeral: true,
       });
     }
@@ -100,7 +113,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.ownerId = targetId;
       await tempChannel.save();
       return interaction.reply({
-        embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('✅ Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
       });
     }
   } catch (error) {

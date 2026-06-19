@@ -13,9 +13,10 @@ import RoleToggles from './pages/RoleToggles';
 import Misc from './pages/Misc';
 import BotProfile from './pages/BotProfile';
 import GlobalProfile from './pages/GlobalProfile';
-import Interface from './pages/Interface';
+import Interface, { applyPrefs } from './pages/Interface';
 import Guide from './pages/Guide';
 import type { Guild } from './types';
+
 import './index.css';
 
 // ── Auth state ────────────────────────────────────────────────────────────────
@@ -104,6 +105,14 @@ export default function App() {
   const [selectedGuild, setSelectedGuild] = useState<Guild | null>(null);
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
+
+  // Apply saved interface preferences (theme/compact/animations) immediately
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('syncink_prefs');
+      if (raw) applyPrefs(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
 
   // On mount, check if already logged in (cookie session)
   useEffect(() => {
