@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion';
+import { Mic2, Settings, Shield } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: () => void;
 }
 
 const features = [
-  { icon: '🎙️', title: 'Temporary Voice Channels', desc: 'Auto-create and manage dynamic voice rooms' },
-  { icon: '⚙️', title: 'Granular Permissions', desc: 'Full role and server-level toggle control' },
-  { icon: '🔒', title: 'Secure & Private', desc: 'Discord OAuth2 protected dashboard' },
+  { icon: <Mic2 size={20} />, title: 'Temporary Voice Channels', desc: 'Auto-create and manage dynamic voice rooms' },
+  { icon: <Settings size={20} />, title: 'Granular Permissions', desc: 'Full role and server-level toggle control' },
+  { icon: <Shield size={20} />, title: 'Secure & Private', desc: 'Discord OAuth2 protected dashboard' },
 ];
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -34,7 +35,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="login-features">
           {features.map(f => (
             <div key={f.title} className="login-feature">
-              <div className="login-feature-icon">{f.icon}</div>
+              <div className="login-feature-icon" style={{ 
+                color: 'var(--primary)', 
+                background: 'rgba(99,102,241,0.15)', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              }}>
+                {f.icon}
+              </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text-primary)', marginBottom: 2 }}>{f.title}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.desc}</div>
