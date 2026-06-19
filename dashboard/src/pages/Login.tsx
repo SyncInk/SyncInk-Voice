@@ -2,22 +2,20 @@ import { motion } from 'framer-motion';
 
 interface LoginPageProps {
   onLogin: () => void;
-  onDemo: () => void;
 }
 
 const features = [
-  { icon: '🎙️', title: 'Temporary Voice Channels', desc: 'Auto-create and manage dynamic rooms' },
+  { icon: '🎙️', title: 'Temporary Voice Channels', desc: 'Auto-create and manage dynamic voice rooms' },
   { icon: '⚙️', title: 'Granular Permissions', desc: 'Full role and server-level toggle control' },
   { icon: '🔒', title: 'Secure & Private', desc: 'Discord OAuth2 protected dashboard' },
 ];
 
-export default function LoginPage({ onLogin, onDemo }: LoginPageProps) {
+export default function LoginPage({ onLogin }: LoginPageProps) {
   return (
     <div className="login-page">
       <div className="login-bg-glow" />
-      {/* Extra ambient orbs */}
       <div style={{ position:'absolute', bottom:'-10%', left:'-5%', width:500, height:500, background:'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', top:'10%', right:'-5%', width:400, height:400, background:'radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', top:'5%', right:'-5%', width:400, height:400, background:'radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
 
       <motion.div
         className="login-card"
@@ -25,7 +23,8 @@ export default function LoginPage({ onLogin, onDemo }: LoginPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        <img src="/logo.png" className="login-logo" alt="Syncink Voice" onError={e => { e.currentTarget.style.display='none'; }} />
+        <img src="/logo.png" className="login-logo" alt="Syncink Voice"
+          onError={e => { e.currentTarget.style.display = 'none'; }} />
 
         <h1 className="login-title">Syncink Voice</h1>
         <p className="login-subtitle">
@@ -35,9 +34,7 @@ export default function LoginPage({ onLogin, onDemo }: LoginPageProps) {
         <div className="login-features">
           {features.map(f => (
             <div key={f.title} className="login-feature">
-              <div className="login-feature-icon" style={{ background: 'var(--primary-light)', borderRadius: 8 }}>
-                {f.icon}
-              </div>
+              <div className="login-feature-icon">{f.icon}</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text-primary)', marginBottom: 2 }}>{f.title}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.desc}</div>
@@ -53,12 +50,8 @@ export default function LoginPage({ onLogin, onDemo }: LoginPageProps) {
           Login with Discord
         </button>
 
-        <div className="login-demo">
-          or <button onClick={onDemo}>try demo mode</button> without logging in
-        </div>
-
-        <div className="login-footer" style={{ marginTop: 28 }}>
-          Syncink Voice Dashboard • Built with ♥ for Discord
+        <div className="login-footer" style={{ marginTop: 24 }}>
+          Syncink Voice Dashboard • Free for everyone • Built with ♥
         </div>
       </motion.div>
     </div>

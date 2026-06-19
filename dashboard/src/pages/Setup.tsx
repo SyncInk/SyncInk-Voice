@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hash, Pencil, Trash2, Plus, Gem } from 'lucide-react';
+import { Hash, Pencil, Trash2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoBanner } from '../components/layout/InfoBanner';
 import { Modal } from '../components/ui/Modal';
@@ -45,15 +45,6 @@ export default function Setup({ addToast }: Props) {
         </button>
       </div>
 
-      {/* Premium card */}
-      <div className="premium-card">
-        <div className="premium-card-icon"><Gem size={28} color="#a78bfa" /></div>
-        <div className="premium-card-text">
-          <div className="premium-card-title">Unlock Unlimited Setups</div>
-          <div className="premium-card-desc">Free servers are limited to 1 setup. Upgrade to create unlimited Join-to-Create systems.</div>
-        </div>
-        <button className="btn btn-primary">Upgrade Now</button>
-      </div>
 
       <AnimatePresence>
         {setups.length === 0 ? (

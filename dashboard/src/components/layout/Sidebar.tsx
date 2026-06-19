@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, Wrench, User, Globe,
-  Monitor, BookOpen, ChevronDown, RefreshCw, Gem, Mic2
+  Monitor, BookOpen, ChevronDown, RefreshCw, Mic2
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -115,15 +115,6 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
         </NavLink>
         <span className="nav-item coming-soon">
           <User size={16} /> Server Profiles <span className="tag tag-purple" style={{fontSize:9,padding:'1px 6px'}}>Soon</span>
-        </span>
-      </div>
-
-      <div className="sidebar-divider" />
-
-      <div className="sidebar-section">
-        <div className="sidebar-section-title">Premium</div>
-        <span className="nav-item premium">
-          <Gem size={16} /> Upgrade
         </span>
       </div>
 
