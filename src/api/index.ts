@@ -7,7 +7,9 @@ import { ENV } from '../config/config';
 import { UserProfile } from '../database/models/UserProfile';
 import { GuildSettings } from '../database/models/GuildSettings';
 import { TempChannel } from '../database/models/TempChannel';
+import { GuildSetup } from '../database/models/GuildSetup';
 import { SyncinkBot } from '../bot/bot';
+
 
 const SESSION_COOKIE_NAME = 'syncink_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -170,6 +172,18 @@ const userHasManageGuild = (guild: DiscordGuild) => {
   }
 };
 
+const getPermissionLevel = (guild: DiscordGuild): 'Owner' | 'Administrator' | 'Moderator' | 'Member' => {
+  if (guild.owner) return 'Owner';
+  const rawPermissions = guild.permissions_new || guild.permissions;
+  if (!rawPermissions) return 'Member';
+  try {
+    const bits = BigInt(rawPermissions);
+    if ((bits & ADMIN_MASK) === ADMIN_MASK) return 'Administrator';
+    if ((bits & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'Moderator';
+  } catch { /* ignore */ }
+  return 'Member';
+};
+
 const createOAuthUrl = (state: string, redirectUri: string) => {
   const params = new URLSearchParams({
     client_id: ENV.CLIENT_ID,
@@ -269,6 +283,7 @@ const getManageableGuilds = async (bot: SyncinkBot, accessToken: string) => {
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
           : null,
         botConnected: Boolean(botGuild),
+        permissionLevel: getPermissionLevel(guild),
       };
     })
     .filter((guild) => guild.botConnected)
@@ -667,6 +682,196 @@ export const startApi = (bot: SyncinkBot) => {
       console.error('[API] Failed to save guild settings:', error);
       const message = error instanceof Error ? error.message : 'Failed to save guild settings';
       return res.status(500).json({ error: message });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/channels ─────────────────────────────────────
+  app.get('/api/guilds/:guildId/channels', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const { categories, voice, text } = mapChannelsByType(guild);
+      return res.json({ categories, voice, text });
+    } catch (error) {
+      console.error('[API] Failed to fetch channels:', error);
+      return res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/setups ───────────────────────────────────────
+  app.get('/api/guilds/:guildId/setups', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const setups = await GuildSetup.find({ guildId }).sort({ createdAt: 1 }).lean();
+      return res.json({ setups });
+    } catch (error) {
+      console.error('[API] Failed to fetch setups:', error);
+      return res.status(500).json({ error: 'Failed to fetch setups' });
+    }
+  });
+
+  // ── POST /api/guilds/:guildId/setups ──────────────────────────────────────
+  app.post('/api/guilds/:guildId/setups', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const { name, generatorChannelId, categoryId, channelNameTemplate,
+        defaultUserLimit, defaultBitrate, defaultRegion, defaultStatus,
+        autoTextChannel, welcomeMessage, isDefault, features } = req.body;
+      if (generatorChannelId) {
+        const ch = guild.channels.cache.get(generatorChannelId);
+        if (!ch || ch.type !== ChannelType.GuildVoice)
+          return res.status(400).json({ error: 'Generator channel must be a voice channel.' });
+        const existing = await GuildSetup.findOne({ guildId, generatorChannelId });
+        if (existing)
+          return res.status(400).json({ error: 'That channel is already used by another setup.' });
+      }
+      if (categoryId) {
+        const cat = guild.channels.cache.get(categoryId);
+        if (!cat || cat.type !== ChannelType.GuildCategory)
+          return res.status(400).json({ error: 'Invalid category selected.' });
+      }
+      const bitrate = Number(defaultBitrate ?? 64);
+      if (bitrate < 8 || bitrate > 384)
+        return res.status(400).json({ error: 'Bitrate must be between 8 and 384 kbps.' });
+      const userLimit = Number(defaultUserLimit ?? 0);
+      if (userLimit < 0 || userLimit > 99)
+        return res.status(400).json({ error: 'User limit must be between 0 and 99.' });
+      if (isDefault) {
+        await GuildSetup.updateMany({ guildId }, { isDefault: false });
+        if (generatorChannelId && categoryId) {
+          await GuildSettings.findOneAndUpdate(
+            { guildId },
+            { guildId, setupChannelId: generatorChannelId, setupCategoryId: categoryId,
+              defaultName: channelNameTemplate || "{user}'s Room", defaultLimit: userLimit },
+            { upsert: true, new: true },
+          );
+        }
+      }
+      const setup = await GuildSetup.create({
+        guildId, name: (name || 'Join to Create').slice(0, 50),
+        generatorChannelId: generatorChannelId || null,
+        categoryId: categoryId || null,
+        channelNameTemplate: (channelNameTemplate || "{user}'s Room").slice(0, 80),
+        defaultUserLimit: userLimit, defaultBitrate: bitrate,
+        defaultRegion: defaultRegion || null,
+        defaultStatus: (defaultStatus || '').slice(0, 200),
+        autoTextChannel: Boolean(autoTextChannel),
+        welcomeMessage: (welcomeMessage || '').slice(0, 500),
+        isDefault: Boolean(isDefault),
+        features: features || undefined,
+      });
+      return res.json({ success: true, setup });
+    } catch (error) {
+      console.error('[API] Failed to create setup:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create setup';
+      return res.status(500).json({ error: message });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/setups/:setupId ──────────────────────────────
+  app.put('/api/guilds/:guildId/setups/:setupId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId, setupId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const setup = await GuildSetup.findOne({ _id: setupId, guildId });
+      if (!setup) return res.status(404).json({ error: 'Setup not found.' });
+      const { name, generatorChannelId, categoryId, channelNameTemplate,
+        defaultUserLimit, defaultBitrate, defaultRegion, defaultStatus,
+        autoTextChannel, welcomeMessage, isDefault, features } = req.body;
+      if (generatorChannelId && generatorChannelId !== setup.generatorChannelId) {
+        const ch = guild.channels.cache.get(generatorChannelId);
+        if (!ch || ch.type !== ChannelType.GuildVoice)
+          return res.status(400).json({ error: 'Generator channel must be a voice channel.' });
+        const conflict = await GuildSetup.findOne({ guildId, generatorChannelId, _id: { $ne: setupId } });
+        if (conflict)
+          return res.status(400).json({ error: 'That channel is already used by another setup.' });
+      }
+      const bitrate = Number(defaultBitrate ?? setup.defaultBitrate);
+      if (bitrate < 8 || bitrate > 384)
+        return res.status(400).json({ error: 'Bitrate must be between 8 and 384 kbps.' });
+      const userLimit = Number(defaultUserLimit ?? setup.defaultUserLimit);
+      if (userLimit < 0 || userLimit > 99)
+        return res.status(400).json({ error: 'User limit must be between 0 and 99.' });
+      if (isDefault) {
+        await GuildSetup.updateMany({ guildId, _id: { $ne: setupId } }, { isDefault: false });
+        const genId = generatorChannelId ?? setup.generatorChannelId;
+        const catId = categoryId ?? setup.categoryId;
+        if (genId && catId) {
+          await GuildSettings.findOneAndUpdate(
+            { guildId },
+            { guildId, setupChannelId: genId, setupCategoryId: catId,
+              defaultName: channelNameTemplate || setup.channelNameTemplate, defaultLimit: userLimit },
+            { upsert: true, new: true },
+          );
+        }
+      }
+      if (name !== undefined) setup.name = name.slice(0, 50);
+      if (generatorChannelId !== undefined) setup.generatorChannelId = generatorChannelId;
+      if (categoryId !== undefined) setup.categoryId = categoryId;
+      if (channelNameTemplate !== undefined) setup.channelNameTemplate = channelNameTemplate.slice(0, 80);
+      setup.defaultUserLimit = userLimit;
+      setup.defaultBitrate = bitrate;
+      if (defaultRegion !== undefined) setup.defaultRegion = defaultRegion || null;
+      if (defaultStatus !== undefined) setup.defaultStatus = defaultStatus.slice(0, 200);
+      if (autoTextChannel !== undefined) setup.autoTextChannel = Boolean(autoTextChannel);
+      if (welcomeMessage !== undefined) setup.welcomeMessage = welcomeMessage.slice(0, 500);
+      if (isDefault !== undefined) setup.isDefault = Boolean(isDefault);
+      if (features) {
+        const cur = (setup.features as unknown as Record<string, boolean>);
+        setup.features = { ...cur, ...features } as typeof setup.features;
+      }
+      await setup.save();
+      return res.json({ success: true, setup });
+    } catch (error) {
+      console.error('[API] Failed to update setup:', error);
+      return res.status(500).json({ error: 'Failed to update setup' });
+    }
+  });
+
+  // ── DELETE /api/guilds/:guildId/setups/:setupId ───────────────────────────
+  app.delete('/api/guilds/:guildId/setups/:setupId', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId, setupId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      await GuildSetup.deleteOne({ _id: setupId, guildId });
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to delete setup:', error);
+      return res.status(500).json({ error: 'Failed to delete setup' });
+    }
+  });
+
+  // ── POST /api/guilds/:guildId/setups/:id/duplicate ───────────────────────
+  app.post('/api/guilds/:guildId/setups/:setupId/duplicate', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId, setupId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const source = await GuildSetup.findOne({ _id: setupId, guildId }).lean();
+      if (!source) return res.status(404).json({ error: 'Setup not found.' });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _id, createdAt, updatedAt, ...rest } = source as typeof source & { createdAt: unknown; updatedAt: unknown };
+      const copy = await GuildSetup.create({
+        ...rest, name: `${source.name} (Copy)`.slice(0, 50),
+        generatorChannelId: null, isDefault: false,
+      });
+      return res.json({ success: true, setup: copy });
+    } catch (error) {
+      console.error('[API] Failed to duplicate setup:', error);
+      return res.status(500).json({ error: 'Failed to duplicate setup' });
     }
   });
 

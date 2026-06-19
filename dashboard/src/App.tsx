@@ -42,14 +42,13 @@ const API = {
       const r = await fetch('/api/guilds', { credentials: 'include' });
       if (!r.ok) return [];
       const d = await r.json();
-      // Map API response to our Guild type
-      return (d.guilds ?? []).map((g: { id: string; name: string; iconUrl: string | null; botConnected: boolean }) => ({
+      return (d.guilds ?? []).map((g: { id: string; name: string; iconUrl: string | null; botConnected: boolean; permissionLevel?: string }) => ({
         id: g.id,
         name: g.name,
         icon: g.iconUrl ? g.iconUrl.match(/icons\/\d+\/([^.?]+)/)?.[1] ?? null : null,
-        owner: false,
-        permissions: '8',
-        permissionLevel: 'Administrator' as const,
+        owner: g.permissionLevel === 'Owner',
+        permissions: '0',
+        permissionLevel: (g.permissionLevel as 'Owner' | 'Administrator' | 'Moderator' | 'Member') ?? 'Member',
         botPresent: g.botConnected,
       }));
     } catch { return []; }
@@ -82,7 +81,7 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<motion.div key="home" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Home guildName={selectedGuild?.name ?? 'your server'} /></motion.div>} />
-            <Route path="/setup" element={<motion.div key="setup" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Setup addToast={addToast} /></motion.div>} />
+            <Route path="/setup" element={<motion.div key="setup" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Setup guildId={selectedGuild?.id ?? null} addToast={addToast} /></motion.div>} />
             <Route path="/server-toggles" element={<motion.div key="st" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><ServerToggles addToast={addToast} /></motion.div>} />
             <Route path="/role-toggles" element={<motion.div key="rt" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><RoleToggles addToast={addToast} /></motion.div>} />
             <Route path="/misc" element={<motion.div key="misc" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Misc addToast={addToast} /></motion.div>} />

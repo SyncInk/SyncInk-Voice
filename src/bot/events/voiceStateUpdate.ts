@@ -1,9 +1,10 @@
 import { ChannelType, TextChannel, VoiceChannel, VoiceState } from 'discord.js';
 import { SyncinkBot } from '../bot';
 import { GuildSettings } from '../../database/models/GuildSettings';
+import { GuildSetup } from '../../database/models/GuildSetup';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
-import { buildControlPanelEmbed, formatRoomName } from '../utils/tempRoom';
+import { buildControlPanelEmbed, ensureRoomTextChannel, formatRoomName, getDisplayNameParts } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { ENV } from '../../config/config';
 
@@ -23,27 +24,45 @@ export const handleVoiceStateUpdate = async (
     return;
   }
 
-  const settings = await GuildSettings.findOne({ guildId });
-  if (!settings?.setupChannelId) {
-    return;
-  }
+  // Look up GuildSetup first (supports multiple setups)
+  const setup = newState.channelId
+    ? await GuildSetup.findOne({ guildId, generatorChannelId: newState.channelId })
+    : null;
 
-  if (newState.channelId === settings.setupChannelId) {
+  // Fall back to legacy GuildSettings for /setup command compatibility
+  const settings = !setup ? await GuildSettings.findOne({ guildId }) : null;
+
+  const isGeneratorChannel = setup
+    ? newState.channelId === setup.generatorChannelId
+    : newState.channelId === settings?.setupChannelId;
+
+  if (newState.channelId && isGeneratorChannel) {
     try {
       const profile = await UserProfile.findOne({ userId: member.id });
-      const savedTemplate = profile?.defaultName?.trim() || settings.defaultName || '{name}';
-      const nameTemplate = savedTemplate === "{user}'s Room" ? '{name}' : savedTemplate;
-      const userLimit = profile?.defaultLimit ?? settings.defaultLimit ?? 0;
+
+      // Resolve name template: user profile > setup template > settings template > default
+      const rawTemplate = profile?.defaultName?.trim()
+        || setup?.channelNameTemplate
+        || settings?.defaultName
+        || "{user}'s Room";
+
+      const userLimit = profile?.defaultLimit ?? setup?.defaultUserLimit ?? settings?.defaultLimit ?? 0;
+
+      const defaultBitrateKbps = setup?.defaultBitrate ?? 64;
       const bitrate = profile?.defaultBitrate
         ? Math.min(newState.guild.maximumBitrate, Math.max(8_000, profile.defaultBitrate * 1_000))
-        : undefined;
+        : Math.min(newState.guild.maximumBitrate, Math.max(8_000, defaultBitrateKbps * 1_000));
+
+      const categoryId = setup?.categoryId ?? settings?.setupCategoryId ?? newState.channel?.parentId ?? undefined;
+      const rtcRegion = setup?.defaultRegion ?? null;
 
       const newChannel = await newState.guild.channels.create({
-        name: formatRoomName(nameTemplate, member),
+        name: formatRoomName(rawTemplate, member),
         type: ChannelType.GuildVoice,
-        parent: settings.setupCategoryId || newState.channel?.parentId || undefined,
+        parent: categoryId || undefined,
         userLimit,
         bitrate,
+        rtcRegion: rtcRegion ?? undefined,
         permissionOverwrites: [
           {
             id: member.id,
@@ -54,17 +73,44 @@ export const handleVoiceStateUpdate = async (
 
       await newState.setChannel(newChannel);
 
-      await TempChannel.create({
+      const tempDoc = await TempChannel.create({
         guildId,
         channelId: newChannel.id,
         ownerId: member.id,
         userLimit: newChannel.userLimit || 0,
         bitrate: newChannel.bitrate,
+        status: setup?.defaultStatus || null,
       });
 
+      // Set initial voice channel status if configured
+      if (setup?.defaultStatus) {
+        await _client.rest.put(`/channels/${newChannel.id}/voice-status`, {
+          body: { status: setup.defaultStatus },
+        }).catch(() => null);
+      }
+
+      // Send control panel embed in the new voice channel itself
       const embed = buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined);
       const components = [...getPanelButtons(), ...getPanelDropdowns()];
       await newChannel.send({ content: `<@${member.id}>`, embeds: [embed], components });
+
+      // Auto text channel if configured in setup
+      if (setup?.autoTextChannel) {
+        const ownerName = getDisplayNameParts(member);
+        await ensureRoomTextChannel(newChannel, tempDoc, 'Auto temporary text channel', ownerName);
+      }
+
+      // Welcome message
+      if (setup?.welcomeMessage) {
+        const ownerName = getDisplayNameParts(member);
+        const msg = setup.welcomeMessage
+          .replace(/{mention}/g, `<@${member.id}>`)
+          .replace(/{user}/g, ownerName)
+          .replace(/{username}/g, member.user.username)
+          .replace(/{channel}/g, newChannel.name)
+          .replace(/{server}/g, newState.guild.name);
+        await newChannel.send({ content: msg }).catch(() => null);
+      }
     } catch (error) {
       console.error('[VoiceState] Error creating temp channel:', error);
     }
