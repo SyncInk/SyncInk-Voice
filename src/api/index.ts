@@ -591,6 +591,67 @@ export const startApi = (bot: SyncinkBot) => {
     }
   });
 
+
+  // ── GET /api/guilds/:guildId/bot-profile ──────────────────────────────────
+  app.get('/api/guilds/:guildId/bot-profile', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      const botMember = guild.members.cache.get(bot.user!.id);
+      const settings = await GuildSettings.findOne({ guildId });
+
+      return res.json({
+        nickname: botMember?.nickname ?? bot.user?.username ?? 'Syncink Voice',
+        defaultName: bot.user?.username ?? 'Syncink Voice',
+        avatarUrl: bot.user?.displayAvatarURL({ size: 128 }) ?? null,
+        serverAvatarUrl: botMember?.displayAvatarURL({ size: 128 }) ?? null,
+        bio: (settings as unknown as Record<string, unknown>)?.botBio as string ?? '',
+      });
+    } catch (error) {
+      console.error('[API] Failed to fetch bot profile:', error);
+      return res.status(500).json({ error: 'Failed to fetch bot profile' });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/bot-profile ──────────────────────────────────
+  app.put('/api/guilds/:guildId/bot-profile', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      const { nickname, bio } = req.body;
+
+      // Set bot nickname for this specific server
+      const botMember = guild.members.cache.get(bot.user!.id)
+        ?? await guild.members.fetch(bot.user!.id).catch(() => null);
+
+      if (botMember) {
+        const nick = (nickname ?? '').slice(0, 32).trim() || null;
+        await botMember.setNickname(nick, 'Updated via dashboard').catch((e) => {
+          console.error('[API] Failed to set bot nickname:', e);
+        });
+      }
+
+      // Store bio in GuildSettings (reuse model, extend at runtime)
+      await GuildSettings.findOneAndUpdate(
+        { guildId },
+        { $set: { botBio: (bio ?? '').slice(0, 400) } },
+        { upsert: true, new: true },
+      );
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to update bot profile:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update bot profile';
+      return res.status(500).json({ error: message });
+    }
+  });
+
   app.get('/api/guilds/:guildId/settings', requireAuth, async (req: AuthenticatedRequest, res) => {
     const session = req.session!;
     const { guildId } = req.params;
@@ -707,8 +768,45 @@ export const startApi = (bot: SyncinkBot) => {
     try {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
-      const setups = await GuildSetup.find({ guildId }).sort({ createdAt: 1 }).lean();
-      return res.json({ setups });
+
+      const [setups, legacySettings] = await Promise.all([
+        GuildSetup.find({ guildId }).sort({ createdAt: 1 }).lean(),
+        GuildSettings.findOne({ guildId }).lean(),
+      ]);
+
+      // Synthesize legacy /setup-command setup if not already in GuildSetup
+      let allSetups = [...setups];
+      if (legacySettings?.setupChannelId) {
+        const alreadyTracked = setups.some(s => s.generatorChannelId === legacySettings.setupChannelId);
+        if (!alreadyTracked) {
+          const legacyGenCh = guild.channels.cache.get(legacySettings.setupChannelId);
+          const legacyCat  = legacySettings.setupCategoryId ? guild.channels.cache.get(legacySettings.setupCategoryId) : null;
+          const synthetic = {
+            _id: `legacy_${guildId}`,
+            guildId,
+            name: 'Join to Create (via /setup)',
+            generatorChannelId: legacySettings.setupChannelId,
+            categoryId: legacySettings.setupCategoryId ?? null,
+            channelNameTemplate: legacySettings.defaultName || "{user}'s Room",
+            defaultUserLimit: legacySettings.defaultLimit ?? 0,
+            defaultBitrate: 64,
+            defaultRegion: null,
+            defaultStatus: '',
+            autoTextChannel: false,
+            welcomeMessage: '',
+            isDefault: setups.every(s => !s.isDefault),
+            features: { rename:true, userLimit:true, status:true, lock:true, claim:true, ghost:true, transfer:true, permit:true, reject:true, invite:true, bitrate:true, region:true, nsfw:false, textChannel:true, requestToJoin:false },
+            createdAt: new Date(0).toISOString(),
+            isLegacy: true,
+            _channelName: legacyGenCh?.name ?? legacySettings.setupChannelId,
+            _categoryName: legacyCat?.name ?? legacySettings.setupCategoryId ?? '',
+          };
+          allSetups = [synthetic as unknown as typeof setups[0], ...allSetups];
+        }
+      }
+
+      return res.json({ setups: allSetups });
+
     } catch (error) {
       console.error('[API] Failed to fetch setups:', error);
       return res.status(500).json({ error: 'Failed to fetch setups' });

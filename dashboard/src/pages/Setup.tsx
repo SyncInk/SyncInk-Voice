@@ -23,6 +23,9 @@ interface GuildSetup {
   isDefault: boolean;
   features: Record<string, boolean>;
   createdAt: string;
+  isLegacy?: boolean;
+  _channelName?: string;
+  _categoryName?: string;
 }
 const BLANK_FEATURES = {
   rename: true, userLimit: true, status: true, lock: true, claim: true,
@@ -161,50 +164,69 @@ const SetupCard = ({
 }) => {
   const genCh = channels.find(c => c.id === setup.generatorChannelId);
   const cat = categories.find(c => c.id === setup.categoryId);
-  const activeFeatures = Object.entries(setup.features).filter(([, v]) => v).length;
+  const activeFeatures = Object.entries(setup.features ?? {}).filter(([, v]) => v).length;
+  const genChName = genCh?.name ?? setup._channelName ?? setup.generatorChannelId ?? '—';
+  const catName   = cat?.name  ?? setup._categoryName ?? setup.categoryId ?? '—';
 
   return (
     <div style={{
-      background: 'var(--bg-card)', border: `1px solid ${setup.isDefault ? 'var(--primary)' : 'var(--border)'}`,
+      background: 'var(--bg-card)',
+      border: `1px solid ${setup.isDefault ? 'var(--primary)' : setup.isLegacy ? 'rgba(245,158,11,0.35)' : 'var(--border)'}`,
       borderRadius: 12, padding: '18px 20px', transition: 'border-color 0.2s, box-shadow 0.2s',
       boxShadow: setup.isDefault ? '0 0 0 1px var(--primary-glow)' : undefined,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 10, background: 'var(--primary-light)',
+            width: 40, height: 40, borderRadius: 10,
+            background: setup.isLegacy ? 'rgba(245,158,11,0.12)' : 'var(--primary-light)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Mic size={18} style={{ color: 'var(--primary)' }} />
+            <Mic size={18} style={{ color: setup.isLegacy ? '#f59e0b' : 'var(--primary)' }} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {setup.name}
               </div>
               {setup.isDefault && (
-                <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--primary)', color: '#fff', padding: '2px 7px', borderRadius: 20, letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--primary)', color: '#fff', padding: '2px 7px', borderRadius: 20, letterSpacing: '0.04em', whiteSpace:'nowrap' }}>
                   DEFAULT
+                </span>
+              )}
+              {setup.isLegacy && (
+                <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '2px 7px', borderRadius: 20, letterSpacing: '0.04em', whiteSpace:'nowrap', border:'1px solid rgba(245,158,11,0.3)' }}>
+                  BOT COMMAND
                 </span>
               )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {genCh && <span>🎙️ {genCh.name}</span>}
-              {cat && <span>📁 {cat.name}</span>}
+              <span>🎙️ {genChName}</span>
+              <span>📁 {catName}</span>
               <span>📋 {setup.channelNameTemplate}</span>
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button className="btn btn-secondary btn-sm" onClick={onDuplicate} title="Duplicate">
-            <Copy size={13} />
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={onEdit}>
-            <Edit2 size={13} style={{ marginRight: 4 }} />Edit
-          </button>
-          <button className="btn btn-sm" style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 12px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }} onClick={onDelete}>
-            <Trash2 size={13} />
-          </button>
+          {!setup.isLegacy && (
+            <button className="btn btn-secondary btn-sm" onClick={onDuplicate} title="Duplicate">
+              <Copy size={13} />
+            </button>
+          )}
+          {!setup.isLegacy ? (
+            <button className="btn btn-secondary btn-sm" onClick={onEdit}>
+              <Edit2 size={13} style={{ marginRight: 4 }} />Edit
+            </button>
+          ) : (
+            <span title="Created via /setup command — use /setup to modify" style={{ fontSize:12, color:'var(--text-muted)', padding:'6px 10px', borderRadius:8, border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:4 }}>
+              <Settings size={12} /> /setup
+            </span>
+          )}
+          {!setup.isLegacy && (
+            <button onClick={onDelete} style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center' }}>
+              <Trash2 size={13} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -214,11 +236,20 @@ const SetupCard = ({
         <Stat icon={<Globe size={13} />} label="Region" value={REGIONS.find(r => r.value === (setup.defaultRegion ?? ''))?.label ?? '🌐 Automatic'} />
         <Stat icon={<Zap size={13} />} label="Features" value={`${activeFeatures} / ${FEATURE_LIST.length} active`} />
         {setup.autoTextChannel && <Stat icon={<Hash size={13} />} label="Text Channel" value="Auto-create" />}
-        <Stat icon={<Settings size={13} />} label="Created" value={new Date(setup.createdAt).toLocaleDateString()} />
+        <Stat icon={<Settings size={13} />} label="Created" value={setup.createdAt === new Date(0).toISOString() ? 'Via /setup' : new Date(setup.createdAt).toLocaleDateString()} />
       </div>
+
+      {setup.isLegacy && (
+        <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--border)', fontSize:12, color:'#f59e0b', display:'flex', alignItems:'center', gap:6 }}>
+          <Settings size={12} />
+          This setup was created using the <code style={{ background:'var(--bg-elevated)', padding:'0 4px', borderRadius:3 }}>/setup</code> bot command.
+          To edit it, run <code style={{ background:'var(--bg-elevated)', padding:'0 4px', borderRadius:3 }}>/setup</code> again in your server, or create a new dashboard setup using the same channel.
+        </div>
+      )}
     </div>
   );
 };
+
 
 const Stat = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
