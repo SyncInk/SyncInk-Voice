@@ -8,6 +8,7 @@ import { UserProfile } from '../database/models/UserProfile';
 import { GuildSettings } from '../database/models/GuildSettings';
 import { TempChannel } from '../database/models/TempChannel';
 import { GuildSetup } from '../database/models/GuildSetup';
+import { DashboardAccess } from '../database/models/DashboardAccess';
 import { SyncinkBot } from '../bot/bot';
 
 
@@ -269,31 +270,56 @@ const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextF
   next();
 };
 
-const getManageableGuilds = async (bot: SyncinkBot, accessToken: string) => {
+const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, accessToken: string) => {
   const guilds = await fetchDiscordGuilds(accessToken);
+  const botGuildIds = guilds.filter(g => bot.guilds.cache.has(g.id)).map(g => g.id);
+  const accessDocs = await DashboardAccess.find({ guildId: { $in: botGuildIds } });
 
-  return guilds
-    .filter(userHasManageGuild)
-    .map((guild) => {
-      const botGuild = bot.guilds.cache.get(guild.id);
-      return {
+  const manageable = [];
+  for (const guild of guilds) {
+    const botGuild = bot.guilds.cache.get(guild.id);
+    if (!botGuild) continue;
+
+    let hasAccess = false;
+    let permLevel = getPermissionLevel(guild);
+
+    if (userHasManageGuild(guild)) {
+      hasAccess = true;
+    } else {
+      const accessDoc = accessDocs.find(d => d.guildId === guild.id);
+      if (accessDoc && accessDoc.allowedRoles.length > 0) {
+        try {
+          const member = await botGuild.members.fetch(sessionUser.id).catch(() => null);
+          if (member) {
+            const hasRole = accessDoc.allowedRoles.some(ar => member.roles.cache.has(ar.roleId));
+            if (hasRole) {
+              hasAccess = true;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (hasAccess) {
+      manageable.push({
         id: guild.id,
         name: guild.name,
         iconUrl: guild.icon
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
           : null,
-        botConnected: Boolean(botGuild),
-        permissionLevel: getPermissionLevel(guild),
-      };
-    })
-    .filter((guild) => guild.botConnected)
-    .sort((a, b) => a.name.localeCompare(b.name));
+        botConnected: true,
+        permissionLevel: permLevel,
+      });
+    }
+  }
+
+  return manageable.sort((a, b) => a.name.localeCompare(b.name));
 };
 
-const getManageableGuildsSafely = async (bot: SyncinkBot, accessToken: string) => {
+const getManageableGuildsSafely = async (bot: SyncinkBot, sessionUser: DiscordUser, accessToken: string) => {
   try {
     return {
-      guilds: await getManageableGuilds(bot, accessToken),
+      guilds: await getManageableGuilds(bot, sessionUser, accessToken),
       unavailable: false,
       error: null as string | null,
     };
@@ -310,7 +336,7 @@ const getManageableGuildsSafely = async (bot: SyncinkBot, accessToken: string) =
 };
 
 const ensureGuildAccess = async (bot: SyncinkBot, session: SessionRecord, guildId: string) => {
-  const guilds = await getManageableGuilds(bot, session.accessToken);
+  const guilds = await getManageableGuilds(bot, session.user, session.accessToken);
   const permittedGuild = guilds.find((guild) => guild.id === guildId);
   if (!permittedGuild) {
     return null;
@@ -528,7 +554,7 @@ export const startApi = (bot: SyncinkBot) => {
         profile = await UserProfile.create({ userId: session.user.id });
       }
 
-      const manageableGuildsResult = await getManageableGuildsSafely(bot, session.accessToken);
+      const manageableGuildsResult = await getManageableGuildsSafely(bot, session.user, session.accessToken);
       const activeRoomsOwned = await TempChannel.countDocuments({ ownerId: session.user.id });
       const activeRoomsGlobal = await TempChannel.countDocuments();
 
@@ -590,11 +616,21 @@ export const startApi = (bot: SyncinkBot) => {
     }
   });
 
+  app.get('/api/users/@me', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const result = await getManageableGuildsSafely(bot, session.user, session.accessToken);
+    res.json({
+      guilds: result.guilds,
+      unavailable: result.unavailable,
+      message: result.unavailable ? 'Discord did not return your server list. Log out and sign in again.' : null,
+    });
+  });
+
   app.get('/api/guilds', requireAuth, async (req: AuthenticatedRequest, res) => {
     const session = req.session!;
 
     try {
-      const result = await getManageableGuildsSafely(bot, session.accessToken);
+      const result = await getManageableGuildsSafely(bot, session.user, session.accessToken);
       res.json({
         guilds: result.guilds,
         unavailable: result.unavailable,
@@ -873,7 +909,7 @@ export const startApi = (bot: SyncinkBot) => {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
       const settings = await GuildSettings.findOne({ guildId });
-      const roleToggles = settings?.roleToggles ? Object.fromEntries(settings.roleToggles) : {};
+      const roleToggles = settings?.roleToggles || {};
       return res.json({ roleToggles });
     } catch (error) {
       console.error('[API] Failed to fetch role toggles:', error);
@@ -898,15 +934,102 @@ export const startApi = (bot: SyncinkBot) => {
         return res.status(400).json({ error: 'Invalid payload format for roleToggles' });
       }
 
-      await GuildSettings.findOneAndUpdate(
+      const updated = await GuildSettings.findOneAndUpdate(
         { guildId },
         { $set: { roleToggles } },
         { new: true, upsert: true },
       );
+      if (!updated) throw new Error('Database save returned falsey');
       return res.json({ success: true });
     } catch (error) {
       console.error('[API] Failed to save role toggles:', error);
       return res.status(500).json({ error: 'Failed to save role toggles' });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/access ───────────────────────────────────────
+  app.get('/api/guilds/:guildId/access', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const accessDoc = await DashboardAccess.findOne({ guildId });
+      return res.json({ allowedRoles: accessDoc?.allowedRoles || [] });
+    } catch (error) {
+      console.error('[API] Failed to fetch access:', error);
+      return res.status(500).json({ error: 'Failed to fetch access rules' });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/access ───────────────────────────────────────
+  app.put('/api/guilds/:guildId/access', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      if (getPermissionLevel(guild) !== 'Owner' && getPermissionLevel(guild) !== 'Administrator') {
+        return res.status(403).json({ error: 'Administrator permissions required to edit Dashboard Access.' });
+      }
+
+      const { allowedRoles } = req.body;
+      if (!Array.isArray(allowedRoles)) {
+        return res.status(400).json({ error: 'Invalid payload format for allowedRoles' });
+      }
+
+      const updated = await DashboardAccess.findOneAndUpdate(
+        { guildId },
+        { $set: { allowedRoles } },
+        { new: true, upsert: true }
+      );
+      if (!updated) throw new Error('Database save returned falsey');
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to save access:', error);
+      return res.status(500).json({ error: 'Failed to save access rules' });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/logging ──────────────────────────────────────
+  app.get('/api/guilds/:guildId/logging', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const settings = await GuildSettings.findOne({ guildId });
+      return res.json({ 
+        loggingChannelId: settings?.loggingChannelId || '',
+        loggingEvents: settings?.loggingEvents || {}
+      });
+    } catch (error) {
+      console.error('[API] Failed to fetch logging settings:', error);
+      return res.status(500).json({ error: 'Failed to fetch logging settings' });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/logging ──────────────────────────────────────
+  app.put('/api/guilds/:guildId/logging', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      const { loggingChannelId, loggingEvents } = req.body;
+      
+      const updated = await GuildSettings.findOneAndUpdate(
+        { guildId },
+        { $set: { loggingChannelId, loggingEvents } },
+        { new: true, upsert: true }
+      );
+      if (!updated) throw new Error('Database save returned falsey');
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to save logging settings:', error);
+      return res.status(500).json({ error: 'Failed to save logging settings' });
     }
   });
 

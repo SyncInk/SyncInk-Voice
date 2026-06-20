@@ -194,9 +194,21 @@ export default function RoleToggles({ guildId, addToast }: Props) {
                 style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--radius-sm)', cursor:'pointer', background: selectedId===roleId ? 'var(--primary-light)' : 'transparent', marginBottom:2, transition:'background 0.2s' }}
               >
                 <span style={{ width:10, height:10, borderRadius:'50%', background: role.color === '#000000' ? '#99aab5' : role.color, flexShrink:0 }} />
-                <span style={{ flex:1, fontSize:13, fontWeight:500, color: selectedId===roleId ? '#c4b5fd' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {role.name}
-                  {role.isOrphaned && <span title="This role no longer exists on Discord. It will be ignored." style={{ color: '#ef4444', fontSize: 12 }}>⚠️</span>}
+                <span style={{ flex:1, fontSize:13, fontWeight:500, color: selectedId===roleId ? '#c4b5fd' : 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {role.name}
+                    {role.isOrphaned && <span title="This role no longer exists on Discord. It will be ignored." style={{ color: '#ef4444', fontSize: 12 }}>⚠️</span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    {(() => {
+                      const t = profiles.get(roleId);
+                      if (!t) return 'No overrides';
+                      const active = Object.keys(t).filter(k => t[k as keyof typeof t] === 'enabled').length;
+                      const inactive = Object.keys(t).filter(k => t[k as keyof typeof t] === 'disabled').length;
+                      if (active === 0 && inactive === 0) return 'No overrides';
+                      return `${active} allowed, ${inactive} denied`;
+                    })()}
+                  </div>
                 </span>
                 <button onClick={e => { e.stopPropagation(); removeRole(roleId); }} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:2, display:'flex', borderRadius:4 }}>
                   <X size={13} />

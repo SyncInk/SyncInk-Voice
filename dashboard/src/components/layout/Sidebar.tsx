@@ -41,6 +41,7 @@ const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Member: false },
   '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Member: false },
   '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: false, Member: false },
+  '/access':         { Owner: true,  Administrator: true,  Moderator: false, Member: false },
   '/misc':           { Owner: true,  Administrator: true,  Moderator: true,  Member: false },
   '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Member: false },
   '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
@@ -150,7 +151,8 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
         <NavItem to="/setup"          icon={<Settings    size={16} />} label="Setup"          permLevel={permLevel} />
         <NavItem to="/server-toggles" icon={<ToggleLeft  size={16} />} label="Server Toggles" permLevel={permLevel} />
         <NavItem to="/role-toggles"   icon={<Shield      size={16} />} label="Role Toggles"   permLevel={permLevel} />
-        <NavItem to="/misc"           icon={<Wrench      size={16} />} label="Misc"            permLevel={permLevel} />
+        <NavItem to="/access"         icon={<Lock        size={16} />} label="Dashboard Access" permLevel={permLevel} />
+        <NavItem to="/misc"           icon={<Wrench      size={16} />} label="Miscellaneous"  permLevel={permLevel} />
         <NavItem to="/bot-profile"    icon={<User        size={16} />} label="Bot Profile"     permLevel={permLevel} />
         <NavItem to="/interface"      icon={<Monitor     size={16} />} label="Interface"       permLevel={permLevel} />
       </div>

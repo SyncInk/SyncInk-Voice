@@ -14,6 +14,7 @@ import Misc from './pages/Misc';
 import BotProfile from './pages/BotProfile';
 import GlobalProfile from './pages/GlobalProfile';
 import Interface, { applyPrefs } from './pages/Interface';
+import AccessManager from './pages/AccessManager';
 import Guide from './pages/Guide';
 import InviteBot from './pages/InviteBot';
 import type { Guild } from './types';
@@ -80,7 +81,7 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
       <div className="main-content">
         <Topbar user={user} onLogout={onLogout} />
         <AnimatePresence mode="wait">
-          <Routes>
+          <Routes key={selectedGuild?.id || 'empty'}>
             <Route path="/" element={<motion.div key="home" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Home guildName={selectedGuild?.name ?? 'your server'} /></motion.div>} />
             <Route path="/setup" element={<motion.div key="setup" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Setup guildId={selectedGuild?.id ?? null} addToast={addToast} /></motion.div>} />
             <Route path="/server-toggles" element={<motion.div key="st" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><ServerToggles addToast={addToast} /></motion.div>} />
@@ -88,6 +89,7 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
             <Route path="/misc" element={<motion.div key="misc" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Misc addToast={addToast} /></motion.div>} />
             <Route path="/bot-profile" element={<motion.div key="bp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><BotProfile guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div>} />
             <Route path="/global-profile" element={<motion.div key="gp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><GlobalProfile addToast={addToast} /></motion.div>} />
+            <Route path="/access" element={<motion.div key="access" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><AccessManager guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div>} />
             <Route path="/interface" element={<motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Interface addToast={addToast} /></motion.div>} />
             <Route path="/invite" element={<motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><InviteBot /></motion.div>} />
             <Route path="/guide" element={<motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div>} />
@@ -125,7 +127,11 @@ export default function App() {
         setUser(u);
         const gs = await API.guilds();
         setGuilds(gs);
-        if (gs.length > 0) setSelectedGuild(gs[0]);
+        if (gs.length > 0) {
+          const savedId = localStorage.getItem('syncink_selected_guild');
+          const found = gs.find(g => g.id === savedId);
+          setSelectedGuild(found || gs[0]);
+        }
         if (loginStatus === 'success') {
           // Clean URL
           window.history.replaceState({}, '', '/');
@@ -172,7 +178,10 @@ export default function App() {
           user={user}
           guilds={guilds}
           selectedGuild={selectedGuild}
-          onSelectGuild={setSelectedGuild}
+          onSelectGuild={(g) => {
+            localStorage.setItem('syncink_selected_guild', g.id);
+            setSelectedGuild(g);
+          }}
           onLogout={handleLogout}
           addToast={addToast}
         />

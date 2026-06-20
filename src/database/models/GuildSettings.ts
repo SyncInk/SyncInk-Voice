@@ -11,7 +11,9 @@ export interface IGuildSettings extends Document {
   serverBio?: string;
   serverAvatar?: string;
   serverBanner?: string;
-  roleToggles?: Map<string, Record<string, string>>;
+  roleToggles?: any;
+  loggingChannelId?: string;
+  loggingEvents?: any;
 }
 
 const GuildSettingsSchema = new Schema<IGuildSettings>({
@@ -25,7 +27,9 @@ const GuildSettingsSchema = new Schema<IGuildSettings>({
   serverBio: { type: String, default: '' },
   serverAvatar: { type: String, default: '' },
   serverBanner: { type: String, default: '' },
-  roleToggles: { type: Map, of: Object, default: () => new Map() },
+  roleToggles: { type: Schema.Types.Mixed, default: {} },
+  loggingChannelId: { type: String, default: '' },
+  loggingEvents: { type: Schema.Types.Mixed, default: {} },
 });
 
 export const GuildSettings = model<IGuildSettings>('GuildSettings', GuildSettingsSchema);

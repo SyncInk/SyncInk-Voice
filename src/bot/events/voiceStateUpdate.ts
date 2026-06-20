@@ -12,6 +12,7 @@ import {
 } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
 import { sendWebhookMessage } from '../utils/webhook';
+import { logEvent } from '../utils/logger';
 import { ENV } from '../../config/config';
 
 export const handleVoiceStateUpdate = async (
@@ -125,6 +126,16 @@ export const handleVoiceStateUpdate = async (
           { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname }
         );
       }
+      // Audit log: channel created
+      await logEvent({
+        guild: newState.guild,
+        type: 'channelCreated',
+        title: 'Temporary Voice Channel Created',
+        description: `${member} created \`${newChannel.name}\``,
+        color: 0x57f287,
+        executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
+      });
+
     } catch (error) {
       console.error('[VoiceState] Error creating temp channel:', error);
     }
@@ -143,6 +154,17 @@ export const handleVoiceStateUpdate = async (
           ReadMessageHistory: true,
         }).catch(() => null);
       }
+    }
+
+    if (oldState.channelId !== newState.channelId) {
+      await logEvent({
+        guild: newState.guild,
+        type: 'userMovement',
+        title: 'User Joined Voice',
+        description: `${member} joined \`${voiceChannel?.name || 'Voice Channel'}\``,
+        color: 0x3498db,
+        executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
+      });
     }
   }
 
@@ -168,10 +190,30 @@ export const handleVoiceStateUpdate = async (
 
           await channel.delete();
           await TempChannel.deleteOne({ channelId: oldState.channelId });
+
+          await logEvent({
+            guild: oldState.guild,
+            type: 'channelDeleted',
+            title: 'Temporary Voice Channel Deleted',
+            description: `\`${channel.name}\` was automatically deleted.`,
+            color: 0xed4245,
+          });
         } catch (error) {
           console.error('[VoiceState] Error deleting empty temp channel:', error);
         }
       }
+    }
+
+    if (oldState.channelId !== newState.channelId) {
+      const oldChannel = oldState.guild.channels.cache.get(oldState.channelId);
+      await logEvent({
+        guild: oldState.guild,
+        type: 'userMovement',
+        title: 'User Left Voice',
+        description: `${member} left \`${oldChannel?.name || 'Voice Channel'}\``,
+        color: 0x95a5a6,
+        executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
+      });
     }
   }
 };
