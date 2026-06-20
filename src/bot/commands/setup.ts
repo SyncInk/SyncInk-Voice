@@ -76,7 +76,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       });
     }
 
-    await GuildSettings.findOneAndUpdate(
+    const settings = await GuildSettings.findOneAndUpdate(
       { guildId: guild.id },
       {
         guildId: guild.id,
@@ -93,7 +93,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       return;
     }
 
-    const embed = buildControlPanelEmbed(panelMember, ENV.DASHBOARD_URL || undefined);
+    const embed = buildControlPanelEmbed(panelMember, ENV.DASHBOARD_URL || undefined, settings);
 
     const components = [...getPanelButtons(), ...getPanelDropdowns()];
     await controlChannel.send({ embeds: [embed], components });

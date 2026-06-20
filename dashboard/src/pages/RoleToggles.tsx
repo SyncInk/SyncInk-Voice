@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, X, Plus } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
 import { ThreeToggle } from '../components/ui/ThreeToggle';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
 import type { ToggleState } from '../types';
 
-interface Props { addToast: (type: 'success'|'error'|'warning'|'info', msg: string) => void; }
+interface Props {
+  guildId: string | null;
+  addToast: (type: 'success'|'error'|'warning'|'info', msg: string) => void;
+}
 
-const ALL_ROLES = [
-  { id: '1', name: '@Moderator', color: '#22c55e' },
-  { id: '2', name: '@VIP', color: '#f59e0b' },
-  { id: '3', name: '@Member', color: '#6b7280' },
-];
+interface DiscordRole {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+}
 
 const TOGGLE_FEATURES = [
   { key: 'channelName', label: 'Channel Name', desc: 'Allow users to change their channel name' },
@@ -34,16 +38,33 @@ const TOGGLE_FEATURES = [
 
 const defaultToggles = () => Object.fromEntries(TOGGLE_FEATURES.map(f => [f.key, 'inherit' as ToggleState])) as Record<string, ToggleState>;
 
-export default function RoleToggles({ addToast }: Props) {
+export default function RoleToggles({ guildId, addToast }: Props) {
+  const [allRoles, setAllRoles] = useState<DiscordRole[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Record<string, ToggleState>>>(new Map());
   const [savedProfiles, setSavedProfiles] = useState<Map<string, Record<string, ToggleState>>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    if (!guildId) return;
+    setLoading(true);
+    fetch(`/api/guilds/${guildId}/roles`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.roles) {
+          setAllRoles(data.roles);
+        }
+        // TODO: Also fetch saved role toggles profiles from backend and merge here.
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [guildId]);
 
   const hasChanges = JSON.stringify([...profiles]) !== JSON.stringify([...savedProfiles]);
 
-  const addableRoles = ALL_ROLES.filter(r => !profiles.has(r.id));
+  const addableRoles = allRoles.filter(r => !profiles.has(r.id));
 
   const addRole = (roleId: string) => {
     setProfiles(p => { const m = new Map(p); m.set(roleId, defaultToggles()); return m; });
@@ -74,8 +95,29 @@ export default function RoleToggles({ addToast }: Props) {
     addToast('success', 'Role toggles saved!');
   };
 
-  const selected = selectedId ? ALL_ROLES.find(r => r.id === selectedId) : null;
+  const selected = selectedId ? allRoles.find(r => r.id === selectedId) : null;
   const selectedToggles = selectedId ? (profiles.get(selectedId) ?? defaultToggles()) : null;
+
+  if (!guildId) {
+    return (
+      <div className="page-content">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, flexDirection:'column', gap:16, color:'var(--text-muted)' }}>
+          <Shield size={48} style={{ opacity:0.3 }} />
+          <div style={{ fontSize:16, fontWeight:600 }}>Select a server from the sidebar</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="page-content">
+        <div style={{ display:'flex', justifyContent:'center', marginTop:100, color:'var(--primary)' }}>
+          Loading roles...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-content">
@@ -105,7 +147,7 @@ export default function RoleToggles({ addToast }: Props) {
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <span style={{ width:10, height:10, borderRadius:'50%', background:r.color, flexShrink:0 }} />
+                  <span style={{ width:10, height:10, borderRadius:'50%', background: r.color === '#000000' ? '#99aab5' : r.color, flexShrink:0 }} />
                   {r.name}
                 </div>
               ))}
@@ -120,14 +162,14 @@ export default function RoleToggles({ addToast }: Props) {
           )}
 
           {[...profiles.keys()].map(roleId => {
-            const role = ALL_ROLES.find(r => r.id === roleId);
+            const role = allRoles.find(r => r.id === roleId);
             if (!role) return null;
             return (
               <div key={roleId}
                 onClick={() => setSelectedId(roleId)}
                 style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--radius-sm)', cursor:'pointer', background: selectedId===roleId ? 'var(--primary-light)' : 'transparent', marginBottom:2, transition:'background 0.2s' }}
               >
-                <span style={{ width:10, height:10, borderRadius:'50%', background:role.color, flexShrink:0 }} />
+                <span style={{ width:10, height:10, borderRadius:'50%', background: role.color === '#000000' ? '#99aab5' : role.color, flexShrink:0 }} />
                 <span style={{ flex:1, fontSize:13, fontWeight:500, color: selectedId===roleId ? '#c4b5fd' : 'var(--text-secondary)' }}>{role.name}</span>
                 <button onClick={e => { e.stopPropagation(); removeRole(roleId); }} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:2, display:'flex', borderRadius:4 }}>
                   <X size={13} />

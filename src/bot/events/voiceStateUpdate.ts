@@ -29,8 +29,8 @@ export const handleVoiceStateUpdate = async (
     ? await GuildSetup.findOne({ guildId, generatorChannelId: newState.channelId })
     : null;
 
-  // Fall back to legacy GuildSettings for /setup command compatibility
-  const settings = !setup ? await GuildSettings.findOne({ guildId }) : null;
+  // Fetch settings for server branding (avatar/banner) and legacy fallback
+  const settings = await GuildSettings.findOne({ guildId });
 
   const isGeneratorChannel = setup
     ? newState.channelId === setup.generatorChannelId
@@ -90,7 +90,7 @@ export const handleVoiceStateUpdate = async (
       }
 
       // Send control panel embed in the new voice channel itself
-      const embed = buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined);
+      const embed = buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined, settings);
       const components = [...getPanelButtons(), ...getPanelDropdowns()];
       await newChannel.send({ content: `<@${member.id}>`, embeds: [embed], components });
 

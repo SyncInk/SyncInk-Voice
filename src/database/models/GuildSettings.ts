@@ -7,6 +7,10 @@ export interface IGuildSettings extends Document {
   voiceControlChannelId: string | null;
   defaultLimit: number;
   defaultName: string;
+  serverNickname?: string;
+  serverBio?: string;
+  serverAvatar?: string;
+  serverBanner?: string;
 }
 
 const GuildSettingsSchema = new Schema<IGuildSettings>({
@@ -16,6 +20,10 @@ const GuildSettingsSchema = new Schema<IGuildSettings>({
   voiceControlChannelId: { type: String, default: null },
   defaultLimit: { type: Number, default: 0 },
   defaultName: { type: String, default: '{name}' },
+  serverNickname: { type: String, default: '' },
+  serverBio: { type: String, default: '' },
+  serverAvatar: { type: String, default: '' },
+  serverBanner: { type: String, default: '' },
 });
 
 export const GuildSettings = model<IGuildSettings>('GuildSettings', GuildSettingsSchema);

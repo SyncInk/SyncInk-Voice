@@ -11,6 +11,7 @@ import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
 import { buildControlPanelEmbed, buildRoomEmbed, formatRoomName, getDisplayNameParts, toTextChannelName } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
+import { GuildSettings } from '../../database/models/GuildSettings';
 import { ENV } from '../../config/config';
 
 // Refresh the control panel message in the voice channel so select menus reset
@@ -21,8 +22,9 @@ const refreshPanel = async (channel: VoiceChannel, member: GuildMember) => {
       (m) => m.author.bot && m.embeds.length > 0 && m.components.length > 0,
     );
     if (panelMsg) {
+      const settings = await GuildSettings.findOne({ guildId: member.guild.id });
       await panelMsg.edit({
-        embeds: [buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined)],
+        embeds: [buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined, settings)],
         components: [...getPanelButtons(), ...getPanelDropdowns()],
       });
     }

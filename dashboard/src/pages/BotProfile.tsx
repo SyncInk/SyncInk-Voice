@@ -36,7 +36,10 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [serverAvatar, setServerAvatar] = useState<string>('');
+  const [serverBanner, setServerBanner] = useState<string>('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
 
   const empty = { nickname: '', bio: '', avatarUrl: '', serverAvatarUrl: '', defaultName: 'Syncink Voice' };
   const [saved, setSaved] = useState(empty);
@@ -61,6 +64,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
           };
           setSaved(prof);
           setState(prof);
+          setServerAvatar(d.serverAvatarUrl || '');
         }
       })
       .catch(() => null)
@@ -91,27 +95,89 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
     }
   };
 
+  // Helper to resize and convert image to base64
+  const processImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL(file.type, 0.8));
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!guildId || !can.avatar) return;
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !guildId) return;
     if (file.size > 10 * 1024 * 1024) {
-      addToast('error', 'Avatar must be under 10MB');
+      addToast('error', 'File too large. Maximum size is 10MB.');
       return;
     }
     setAvatarUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      const res = await fetch(`/api/guilds/${guildId}/bot-avatar`, {
-        method: 'PUT', credentials: 'include', body: formData,
+      const base64 = await processImage(file, 512, 512);
+      const res = await fetch(`/api/guilds/${guildId}/branding`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ serverAvatar: base64 }),
       });
       if (!res.ok) throw new Error('Avatar upload failed');
-      addToast('success', 'Bot avatar updated! Note: Discord may take a moment to refresh.');
+      setServerAvatar(base64);
+      addToast('success', 'Server Avatar updated successfully!');
     } catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Avatar upload failed');
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !guildId) return;
+    if (file.size > 10 * 1024 * 1024) {
+      addToast('error', 'File too large. Maximum size is 10MB.');
+      return;
+    }
+    setBannerUploading(true);
+    try {
+      const base64 = await processImage(file, 1024, 512);
+      const res = await fetch(`/api/guilds/${guildId}/branding`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ serverBanner: base64 }),
+      });
+      if (!res.ok) throw new Error('Banner upload failed');
+      setServerBanner(base64);
+      addToast('success', 'Server Banner updated successfully!');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Banner upload failed');
+    } finally {
+      setBannerUploading(false);
     }
   };
 
@@ -178,19 +244,11 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
           <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:24, paddingBottom:24, borderBottom:'1px solid var(--border)' }}>
             <div style={{ position:'relative' }}>
               <div style={{ width:80, height:80, borderRadius:'50%', background:'var(--primary-light)', border:'2px solid var(--primary-glow)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                {state.serverAvatarUrl || state.avatarUrl
-                  ? <img src={state.serverAvatarUrl || state.avatarUrl} alt="Bot" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                {serverAvatar || state.avatarUrl
+                  ? <img src={serverAvatar || state.avatarUrl} alt="Bot" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                   : <User size={32} color="var(--primary)" />
                 }
               </div>
-              {can.avatar && (
-                <label style={{ position:'absolute', bottom:-2, right:-2, width:26, height:26, background:'var(--primary)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid var(--bg-card)' }}>
-                  {avatarUploading
-                    ? <Loader2 size={12} color="#fff" style={{ animation:'spin 1s linear infinite' }} />
-                    : <Camera size={12} color="#fff" />}
-                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} style={{ display:'none' }} />
-                </label>
-              )}
             </div>
             <div>
               <div style={{ fontSize:16, fontWeight:700, color:'var(--text-primary)', marginBottom:4 }}>
@@ -251,30 +309,83 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
             </div>
           </div>
 
-          {/* Custom Avatar */}
-          <div className="section" style={{ borderBottom:'none' }}>
-            <div className="section-label"><Camera size={14} style={{ display:'inline', marginRight:6 }} />Custom Avatar (Server-wide)</div>
-            <div className="section-desc" style={{ marginBottom:12 }}>
-              {can.avatar
-                ? 'Upload a custom avatar for the bot globally. This affects all servers. (PNG, JPG, WEBP — max 10MB)'
-                : 'Only the server Owner can change the bot avatar globally.'}
+          {/* Avatar Upload (Server-Specific) */}
+          <div className="settings-section">
+            <div className="settings-section-header">
+              <h3 style={{ display:'flex', alignItems:'center', gap:8 }}><Camera size={16} /> Server Avatar</h3>
+              <p>Upload a custom avatar for the bot. This image is stored and used <strong>only in this server</strong> (e.g., in control panels and logs).</p>
             </div>
-            {can.avatar ? (
-              <label style={{ display:'block' }}>
-                <div
-                  style={{ background:'var(--bg-input)', border:'2px dashed var(--border)', borderRadius:'var(--radius)', padding:'32px', textAlign:'center', cursor:'pointer', transition:'border-color 0.2s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--primary)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-                >
-                  <Camera size={28} color="var(--text-muted)" style={{ margin:'0 auto 8px', display:'block' }} />
-                  <div style={{ fontSize:13, color:'var(--text-muted)' }}>Click to upload custom avatar</div>
-                  <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>PNG, JPG, WEBP up to 10MB</div>
+            
+            <div style={{ position:'relative', borderRadius:16, border:'2px dashed var(--border)', background:'var(--bg-input)', padding:40, textAlign:'center', transition:'all 0.2s', cursor:'pointer' }}
+                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; }}
+                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-input)'; }}
+            >
+              <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleAvatarUpload}
+                     style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                     disabled={avatarUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator')} />
+              
+              {avatarUploading ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--primary)' }}>
+                  <Loader2 size={32} className="spin" />
+                  <div style={{ fontSize:14, fontWeight:500 }}>Compressing & Uploading...</div>
                 </div>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} style={{ display:'none' }} />
-              </label>
-            ) : (
-              <LockedOverlay reason={permissionLevel === 'Administrator' ? 'Avatar changes are restricted to the server Owner' : 'Requires Owner permission'} />
+              ) : serverAvatar ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+                  <img src={serverAvatar} alt="Server Avatar" style={{ width:100, height:100, borderRadius:'50%', objectFit:'cover', boxShadow:'0 8px 16px rgba(0,0,0,0.3)' }} />
+                  <div style={{ color:'var(--text-secondary)', fontSize:13 }}>Click or drag to change avatar</div>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--text-muted)' }}>
+                  <Camera size={32} />
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:500, color:'var(--text-secondary)' }}>Click to upload server avatar</div>
+                    <div style={{ fontSize:12, marginTop:4 }}>PNG, JPG, WEBP up to 10MB</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {permissionLevel !== 'Owner' && permissionLevel !== 'Administrator' && (
+              <div style={{ marginTop:12, fontSize:13, color:'var(--error)', display:'flex', alignItems:'center', gap:6 }}>
+                <Lock size={14} /> Only Administrators can upload server branding.
+              </div>
             )}
+          </div>
+
+          {/* Banner Upload (Server-Specific) */}
+          <div className="settings-section">
+            <div className="settings-section-header">
+              <h3 style={{ display:'flex', alignItems:'center', gap:8 }}><Camera size={16} /> Server Banner</h3>
+              <p>Upload a custom banner for the bot. This image is used as the main image in control panels and embeds <strong>only in this server</strong>.</p>
+            </div>
+            
+            <div style={{ position:'relative', borderRadius:16, border:'2px dashed var(--border)', background:'var(--bg-input)', padding:40, textAlign:'center', transition:'all 0.2s', cursor:'pointer', overflow:'hidden' }}
+                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; }}
+                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-input)'; }}
+            >
+              <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleBannerUpload}
+                     style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%', zIndex:10 }}
+                     disabled={bannerUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator')} />
+              
+              {bannerUploading ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--primary)' }}>
+                  <Loader2 size={32} className="spin" />
+                  <div style={{ fontSize:14, fontWeight:500 }}>Compressing & Uploading...</div>
+                </div>
+              ) : serverBanner ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, position:'relative', zIndex:1 }}>
+                  <img src={serverBanner} alt="Server Banner" style={{ width:'100%', maxHeight:150, borderRadius:8, objectFit:'cover', boxShadow:'0 8px 16px rgba(0,0,0,0.3)' }} />
+                  <div style={{ color:'var(--text-secondary)', fontSize:13 }}>Click or drag to change banner</div>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--text-muted)', position:'relative', zIndex:1 }}>
+                  <Camera size={32} />
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:500, color:'var(--text-secondary)' }}>Click to upload server banner</div>
+                    <div style={{ fontSize:12, marginTop:4 }}>PNG, JPG, WEBP up to 10MB (Wide format recommended)</div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

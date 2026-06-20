@@ -7,6 +7,7 @@ import {
   VoiceChannel,
 } from 'discord.js';
 import { ITempChannel } from '../../database/models/TempChannel';
+import { IGuildSettings } from '../../database/models/GuildSettings';
 import { ENV } from '../../config/config';
 
 export const getDisplayNameParts = (member: GuildMember) => {
@@ -53,14 +54,14 @@ export const getCurrentGameName = (member: GuildMember) => {
   return activity?.name?.slice(0, 80) || null;
 };
 
-export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: string) =>
-  new EmbedBuilder()
+export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: string, settings?: IGuildSettings | null) => {
+  const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
       name: `${member.displayName}'s Room`,
-      iconURL: member.user.displayAvatarURL({ size: 64 }),
+      iconURL: settings?.serverAvatar || member.user.displayAvatarURL({ size: 64 }),
     })
-    .setThumbnail(member.user.displayAvatarURL({ size: 128 }))
+    .setThumbnail(settings?.serverAvatar || member.user.displayAvatarURL({ size: 128 }))
     .setTitle('🎙️ Your Temporary Voice Channel')
     .setDescription(
       [
@@ -71,9 +72,15 @@ export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: strin
       ].join('\n'),
     )
     .setFooter({
-      text: dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Syncink Voice • Temporary Voice Channels',
+      text: settings?.serverBio || (dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Syncink Voice • Temporary Voice Channels'),
     });
 
+  if (settings?.serverBanner) {
+    embed.setImage(settings.serverBanner);
+  }
+  
+  return embed;
+};
 export const buildLookingForMembersEmbed = (
   member: GuildMember,
   channelName: string,

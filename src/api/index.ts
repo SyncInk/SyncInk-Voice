@@ -316,7 +316,21 @@ const ensureGuildAccess = async (bot: SyncinkBot, session: SessionRecord, guildI
     return null;
   }
 
-  return bot.guilds.cache.get(guildId) ?? null;
+  const botGuild = bot.guilds.cache.get(guildId);
+  if (!botGuild) return null;
+
+  try {
+    if (botGuild.channels.cache.size <= 2) {
+      await botGuild.channels.fetch();
+    }
+    if (botGuild.roles.cache.size <= 2) {
+      await botGuild.roles.fetch();
+    }
+  } catch (err) {
+    console.error(`[API] Failed to fetch channels/roles for guild ${guildId}:`, err);
+  }
+
+  return botGuild;
 };
 
 const mapChannelsByType = (guild: Guild) => {
@@ -758,6 +772,30 @@ export const startApi = (bot: SyncinkBot) => {
     } catch (error) {
       console.error('[API] Failed to fetch channels:', error);
       return res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/roles ────────────────────────────────────────
+  app.get('/api/guilds/:guildId/roles', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      
+      const roles = guild.roles.cache
+        .filter(r => r.id !== guild.id) // exclude @everyone if desired, but usually we want it. Let's keep it.
+        .map(r => ({ id: r.id, name: r.name, color: r.hexColor, position: r.position }))
+        .sort((a, b) => b.position - a.position);
+        
+      // include @everyone at the bottom
+      const everyone = guild.roles.cache.get(guild.id);
+      if (everyone) roles.push({ id: everyone.id, name: everyone.name, color: everyone.hexColor, position: -1 });
+
+      return res.json({ roles });
+    } catch (error) {
+      console.error('[API] Failed to fetch roles:', error);
+      return res.status(500).json({ error: 'Failed to fetch roles' });
     }
   });
 
