@@ -812,6 +812,12 @@ export const startApi = (bot: SyncinkBot) => {
     try {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      // Fetch from API if cache is surprisingly small or missing
+      if (guild.channels.cache.size <= 2) {
+        await guild.channels.fetch().catch(() => null);
+      }
+
       const { categories, voice, text } = mapChannelsByType(guild);
       return res.json({ categories, voice, text });
     } catch (error) {
@@ -827,20 +833,80 @@ export const startApi = (bot: SyncinkBot) => {
     try {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      // Ensure roles are cached properly
+      if (guild.roles.cache.size <= 1) {
+        await guild.roles.fetch().catch(() => null);
+      }
       
       const roles = guild.roles.cache
-        .filter(r => r.id !== guild.id) // exclude @everyone if desired, but usually we want it. Let's keep it.
-        .map(r => ({ id: r.id, name: r.name, color: r.hexColor, position: r.position }))
+        .filter(r => r.id !== guild.id)
+        .map(r => ({ id: r.id, name: r.name, color: r.hexColor, position: r.position, isOrphaned: false }))
         .sort((a, b) => b.position - a.position);
         
       // include @everyone at the bottom
       const everyone = guild.roles.cache.get(guild.id);
-      if (everyone) roles.push({ id: everyone.id, name: everyone.name, color: everyone.hexColor, position: -1 });
+      if (everyone) roles.push({ id: everyone.id, name: everyone.name, color: everyone.hexColor, position: -1, isOrphaned: false });
+
+      // Fetch saved roles to detect orphans
+      const settings = await GuildSettings.findOne({ guildId });
+      if (settings?.roleToggles) {
+        for (const roleId of settings.roleToggles.keys()) {
+          if (!guild.roles.cache.has(roleId)) {
+            roles.push({ id: roleId, name: 'Orphaned Role (Missing)', color: '#808080', position: -2, isOrphaned: true });
+          }
+        }
+      }
 
       return res.json({ roles });
     } catch (error) {
       console.error('[API] Failed to fetch roles:', error);
       return res.status(500).json({ error: 'Failed to fetch roles' });
+    }
+  });
+
+  // ── GET /api/guilds/:guildId/role-toggles ──────────────────────────────────
+  app.get('/api/guilds/:guildId/role-toggles', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+      const settings = await GuildSettings.findOne({ guildId });
+      const roleToggles = settings?.roleToggles ? Object.fromEntries(settings.roleToggles) : {};
+      return res.json({ roleToggles });
+    } catch (error) {
+      console.error('[API] Failed to fetch role toggles:', error);
+      return res.status(500).json({ error: 'Failed to fetch role toggles' });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/role-toggles ──────────────────────────────────
+  app.put('/api/guilds/:guildId/role-toggles', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      if (getPermissionLevel(guild) !== 'Owner' && getPermissionLevel(guild) !== 'Administrator') {
+        return res.status(403).json({ error: 'Administrator permissions required to edit role toggles.' });
+      }
+
+      const { roleToggles } = req.body;
+      if (typeof roleToggles !== 'object' || roleToggles === null) {
+        return res.status(400).json({ error: 'Invalid payload format for roleToggles' });
+      }
+
+      await GuildSettings.findOneAndUpdate(
+        { guildId },
+        { $set: { roleToggles } },
+        { new: true, upsert: true },
+      );
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to save role toggles:', error);
+      return res.status(500).json({ error: 'Failed to save role toggles' });
     }
   });
 

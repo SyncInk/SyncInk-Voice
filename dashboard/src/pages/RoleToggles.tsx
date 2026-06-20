@@ -15,6 +15,7 @@ interface DiscordRole {
   name: string;
   color: string;
   position: number;
+  isOrphaned?: boolean;
 }
 
 const TOGGLE_FEATURES = [
@@ -50,13 +51,22 @@ export default function RoleToggles({ guildId, addToast }: Props) {
   useEffect(() => {
     if (!guildId) return;
     setLoading(true);
-    fetch(`/api/guilds/${guildId}/roles`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.roles) {
-          setAllRoles(data.roles);
+    Promise.all([
+      fetch(`/api/guilds/${guildId}/roles`, { credentials: 'include' }).then(res => res.json()),
+      fetch(`/api/guilds/${guildId}/role-toggles`, { credentials: 'include' }).then(res => res.json()),
+    ])
+      .then(([rolesData, togglesData]) => {
+        if (rolesData.roles) {
+          setAllRoles(rolesData.roles);
         }
-        // TODO: Also fetch saved role toggles profiles from backend and merge here.
+        if (togglesData.roleToggles) {
+          const map = new Map<string, Record<string, ToggleState>>();
+          for (const [rId, val] of Object.entries(togglesData.roleToggles)) {
+            map.set(rId, val as Record<string, ToggleState>);
+          }
+          setProfiles(map);
+          setSavedProfiles(new Map(map));
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -89,10 +99,24 @@ export default function RoleToggles({ guildId, addToast }: Props) {
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setSavedProfiles(new Map(profiles));
-    setSaving(false);
-    addToast('success', 'Role toggles saved!');
+    try {
+      const obj = Object.fromEntries(profiles);
+      const res = await fetch(`/api/guilds/${guildId}/role-toggles`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ roleToggles: obj }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save role toggles');
+      }
+      setSavedProfiles(new Map(profiles));
+      addToast('success', 'Role toggles saved successfully!');
+    } catch (e) {
+      addToast('error', 'Failed to save role toggles.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selected = selectedId ? allRoles.find(r => r.id === selectedId) : null;
@@ -170,7 +194,10 @@ export default function RoleToggles({ guildId, addToast }: Props) {
                 style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--radius-sm)', cursor:'pointer', background: selectedId===roleId ? 'var(--primary-light)' : 'transparent', marginBottom:2, transition:'background 0.2s' }}
               >
                 <span style={{ width:10, height:10, borderRadius:'50%', background: role.color === '#000000' ? '#99aab5' : role.color, flexShrink:0 }} />
-                <span style={{ flex:1, fontSize:13, fontWeight:500, color: selectedId===roleId ? '#c4b5fd' : 'var(--text-secondary)' }}>{role.name}</span>
+                <span style={{ flex:1, fontSize:13, fontWeight:500, color: selectedId===roleId ? '#c4b5fd' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {role.name}
+                  {role.isOrphaned && <span title="This role no longer exists on Discord. It will be ignored." style={{ color: '#ef4444', fontSize: 12 }}>⚠️</span>}
+                </span>
                 <button onClick={e => { e.stopPropagation(); removeRole(roleId); }} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:2, display:'flex', borderRadius:4 }}>
                   <X size={13} />
                 </button>
