@@ -849,10 +849,8 @@ export const startApi = (bot: SyncinkBot) => {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
 
-      // Fetch from API if cache is surprisingly small or missing
-      if (guild.channels.cache.size <= 2) {
-        await guild.channels.fetch().catch(() => null);
-      }
+      // Force explicit fetch from Discord API to guarantee no missing channels
+      await guild.channels.fetch().catch(() => null);
 
       const { categories, voice, text } = mapChannelsByType(guild);
       return res.json({ categories, voice, text });
@@ -870,10 +868,8 @@ export const startApi = (bot: SyncinkBot) => {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
 
-      // Ensure roles are cached properly
-      if (guild.roles.cache.size <= 1) {
-        await guild.roles.fetch().catch(() => null);
-      }
+      // Force explicit fetch from Discord API to guarantee no missing roles
+      await guild.roles.fetch().catch(() => null);
       
       const roles = guild.roles.cache
         .filter(r => r.id !== guild.id)
@@ -887,7 +883,7 @@ export const startApi = (bot: SyncinkBot) => {
       // Fetch saved roles to detect orphans
       const settings = await GuildSettings.findOne({ guildId });
       if (settings?.roleToggles) {
-        for (const roleId of settings.roleToggles.keys()) {
+        for (const roleId of Object.keys(settings.roleToggles)) {
           if (!guild.roles.cache.has(roleId)) {
             roles.push({ id: roleId, name: 'Orphaned Role (Missing)', color: '#808080', position: -2, isOrphaned: true });
           }
@@ -1046,8 +1042,15 @@ export const startApi = (bot: SyncinkBot) => {
         GuildSettings.findOne({ guildId }).lean(),
       ]);
 
-      // Synthesize legacy /setup-command setup if not already in GuildSetup
-      let allSetups = [...setups];
+      let allSetups = setups.map(s => {
+        const genCh = s.generatorChannelId ? guild.channels.cache.get(s.generatorChannelId) : null;
+        const cat = s.categoryId ? guild.channels.cache.get(s.categoryId) : null;
+        return {
+          ...s,
+          _channelName: genCh?.name ?? undefined,
+          _categoryName: cat?.name ?? undefined,
+        };
+      });
       if (legacySettings?.setupChannelId) {
         const alreadyTracked = setups.some(s => s.generatorChannelId === legacySettings.setupChannelId);
         if (!alreadyTracked) {
@@ -1073,7 +1076,7 @@ export const startApi = (bot: SyncinkBot) => {
             _channelName: legacyGenCh?.name ?? legacySettings.setupChannelId,
             _categoryName: legacyCat?.name ?? legacySettings.setupCategoryId ?? '',
           };
-          allSetups = [synthetic as unknown as typeof setups[0], ...allSetups];
+          allSetups = [synthetic as unknown as typeof allSetups[0], ...allSetups];
         }
       }
 
