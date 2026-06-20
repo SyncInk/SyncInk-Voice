@@ -12,6 +12,7 @@ import {
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
+import { sendWebhookMessage } from '../utils/webhook';
 import {
   buildControlPanelEmbed,
   buildLookingForMembersEmbed,
@@ -229,16 +230,20 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         return;
       }
 
-      await roomText.send({
-        embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)],
-      });
+      await sendWebhookMessage(
+        roomText as any,
+        { embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)] },
+        { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname }
+      );
 
       if (settings?.voiceControlChannelId) {
         const controlChannel = interaction.guild?.channels.cache.get(settings.voiceControlChannelId);
         if (controlChannel?.isTextBased()) {
-          await controlChannel.send({
-            embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)],
-          }).catch(() => null);
+          await sendWebhookMessage(
+            controlChannel as any,
+            { embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)] },
+            { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname }
+          ).catch(() => null);
         }
       }
 

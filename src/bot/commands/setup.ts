@@ -11,6 +11,7 @@ import {
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { buildControlPanelEmbed } from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
+import { sendWebhookMessage } from '../utils/webhook';
 import { ENV } from '../../config/config';
 
 export const data = new SlashCommandBuilder()
@@ -96,7 +97,10 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     const embed = buildControlPanelEmbed(panelMember, ENV.DASHBOARD_URL || undefined, settings);
 
     const components = [...getPanelButtons(), ...getPanelDropdowns()];
-    await controlChannel.send({ embeds: [embed], components });
+    await sendWebhookMessage(controlChannel, { embeds: [embed], components }, {
+      serverAvatar: settings.serverAvatar,
+      serverNickname: settings.serverNickname,
+    });
 
     await interaction.editReply({
       content: `Syncink Voice is ready. The Join to Create voice channel is in ${category} and the control panel is in ${controlChannel}.`,

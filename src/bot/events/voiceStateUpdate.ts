@@ -4,8 +4,14 @@ import { GuildSettings } from '../../database/models/GuildSettings';
 import { GuildSetup } from '../../database/models/GuildSetup';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
-import { buildControlPanelEmbed, ensureRoomTextChannel, formatRoomName, getDisplayNameParts } from '../utils/tempRoom';
+import {
+  buildControlPanelEmbed,
+  ensureRoomTextChannel,
+  formatRoomName,
+  getDisplayNameParts,
+} from '../utils/tempRoom';
 import { getPanelButtons, getPanelDropdowns } from '../utils/components';
+import { sendWebhookMessage } from '../utils/webhook';
 import { ENV } from '../../config/config';
 
 export const handleVoiceStateUpdate = async (
@@ -92,7 +98,11 @@ export const handleVoiceStateUpdate = async (
       // Send control panel embed in the new voice channel itself
       const embed = buildControlPanelEmbed(member, ENV.DASHBOARD_URL || undefined, settings);
       const components = [...getPanelButtons(), ...getPanelDropdowns()];
-      await newChannel.send({ content: `<@${member.id}>`, embeds: [embed], components });
+      await sendWebhookMessage(
+        newChannel,
+        { content: `<@${member.id}>`, embeds: [embed], components },
+        { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname }
+      );
 
       // Auto text channel if configured in setup
       if (setup?.autoTextChannel) {
@@ -109,7 +119,11 @@ export const handleVoiceStateUpdate = async (
           .replace(/{username}/g, member.user.username)
           .replace(/{channel}/g, newChannel.name)
           .replace(/{server}/g, newState.guild.name);
-        await newChannel.send({ content: msg }).catch(() => null);
+        await sendWebhookMessage(
+          newChannel,
+          { content: msg },
+          { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname }
+        );
       }
     } catch (error) {
       console.error('[VoiceState] Error creating temp channel:', error);
