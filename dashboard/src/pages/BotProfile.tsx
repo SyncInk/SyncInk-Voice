@@ -65,6 +65,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
           setSaved(prof);
           setState(prof);
           setServerAvatar(d.serverAvatarUrl || '');
+          setServerBanner(d.serverBannerUrl || '');
         }
       })
       .catch(() => null)

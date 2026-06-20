@@ -621,8 +621,9 @@ export const startApi = (bot: SyncinkBot) => {
         nickname: botMember?.nickname ?? bot.user?.username ?? 'Syncink Voice',
         defaultName: bot.user?.username ?? 'Syncink Voice',
         avatarUrl: bot.user?.displayAvatarURL({ size: 128 }) ?? null,
-        serverAvatarUrl: botMember?.displayAvatarURL({ size: 128 }) ?? null,
-        bio: (settings as unknown as Record<string, unknown>)?.botBio as string ?? '',
+        serverAvatarUrl: settings?.serverAvatar || botMember?.displayAvatarURL({ size: 128 }) || null,
+        serverBannerUrl: settings?.serverBanner || null,
+        bio: settings?.serverBio ?? '',
       });
     } catch (error) {
       console.error('[API] Failed to fetch bot profile:', error);
@@ -654,7 +655,7 @@ export const startApi = (bot: SyncinkBot) => {
       // Store bio in GuildSettings (reuse model, extend at runtime)
       await GuildSettings.findOneAndUpdate(
         { guildId },
-        { $set: { botBio: (bio ?? '').slice(0, 400) } },
+        { $set: { serverBio: (bio ?? '').slice(0, 400) } },
         { upsert: true, new: true },
       );
 
@@ -662,6 +663,49 @@ export const startApi = (bot: SyncinkBot) => {
     } catch (error) {
       console.error('[API] Failed to update bot profile:', error);
       const message = error instanceof Error ? error.message : 'Failed to update bot profile';
+      return res.status(500).json({ error: message });
+    }
+  });
+
+  // ── PUT /api/guilds/:guildId/branding ──────────────────────────────────────
+  app.put('/api/guilds/:guildId/branding', requireAuth, async (req: AuthenticatedRequest, res) => {
+    const session = req.session!;
+    const { guildId } = req.params;
+    try {
+      const guild = await ensureGuildAccess(bot, session, guildId);
+      if (!guild) return res.status(403).json({ error: 'No access to this server.' });
+
+      if (getPermissionLevel(guild) !== 'Owner' && getPermissionLevel(guild) !== 'Administrator') {
+        return res.status(403).json({ error: 'You need Administrator or Owner permissions to change branding.' });
+      }
+
+      const { serverAvatar, serverBanner } = req.body;
+      const updatePayload: Partial<Record<string, string>> = {};
+
+      if (serverAvatar !== undefined) {
+        if (serverAvatar && !serverAvatar.startsWith('data:image/')) {
+          return res.status(400).json({ error: 'Invalid avatar format.' });
+        }
+        updatePayload.serverAvatar = serverAvatar;
+      }
+
+      if (serverBanner !== undefined) {
+        if (serverBanner && !serverBanner.startsWith('data:image/')) {
+          return res.status(400).json({ error: 'Invalid banner format.' });
+        }
+        updatePayload.serverBanner = serverBanner;
+      }
+
+      await GuildSettings.findOneAndUpdate(
+        { guildId },
+        { $set: updatePayload },
+        { upsert: true, new: true },
+      );
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to update branding:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update branding';
       return res.status(500).json({ error: message });
     }
   });
