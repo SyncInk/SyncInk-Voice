@@ -82,6 +82,10 @@ export const handleVoiceStateUpdate = async (
             id: member.id,
             allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers', 'DeafenMembers', 'MuteMembers'],
           },
+          {
+            id: guild.client.user!.id,
+            allow: ['ViewChannel', 'Connect', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory', 'ManageChannels', 'ManageRoles'],
+          },
         ],
       });
 

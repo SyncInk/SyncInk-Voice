@@ -277,6 +277,10 @@ const syncTextChannelAccess = async (textChannel: TextChannel, voiceChannel: Voi
 
   const overwrites = textChannel.permissionOverwrites.cache.filter((overwrite) => overwrite.type === 1);
   for (const [targetId] of overwrites) {
+    if (targetId === textChannel.client.user?.id) {
+      continue;
+    }
+
     if (targetId === tempChannel.ownerId) {
       continue;
     }
