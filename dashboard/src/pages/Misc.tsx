@@ -33,7 +33,8 @@ export default function Misc({ guildId, addToast }: Props) {
   const [state, setState] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [textChannels, setTextChannels] = useState<{id: string; name: string}[]>([]);
+  const [textChannels, setTextChannels] = useState<{id: string; name: string; parentId: string | null}[]>([]);
+  const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
 
   const hasChanges = JSON.stringify(saved) !== JSON.stringify(state);
 
@@ -46,6 +47,7 @@ export default function Misc({ guildId, addToast }: Props) {
       fetch(`/api/guilds/${guildId}/logging`, { credentials: 'include' }).then(res => res.json())
     ]).then(([channelsData, loggingData]) => {
       setTextChannels(channelsData.text || []);
+      setCategories(channelsData.categories || []);
       
       const loadedState = {
         loggingChannelId: loggingData.loggingChannelId || '',
@@ -119,7 +121,22 @@ export default function Misc({ guildId, addToast }: Props) {
                 disabled={!state.loggingEnabled}
               >
                 <option value="">No Log Channel Selected</option>
-                {textChannels.map(c => <option key={c.id} value={c.id}># {c.name}</option>)}
+                {categories.map(cat => {
+                  const children = textChannels.filter(c => c.parentId === cat.id);
+                  if (children.length === 0) return null;
+                  return (
+                    <optgroup key={cat.id} label={cat.name}>
+                      {children.map(c => <option key={c.id} value={c.id}># {c.name}</option>)}
+                    </optgroup>
+                  );
+                })}
+                {textChannels.filter(c => !c.parentId).length > 0 && (
+                  <optgroup label="No Category">
+                    {textChannels.filter(c => !c.parentId).map(c => (
+                      <option key={c.id} value={c.id}># {c.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           </div>

@@ -361,8 +361,8 @@ const ensureGuildAccess = async (bot: SyncinkBot, session: SessionRecord, guildI
 
 const mapChannelsByType = (guild: Guild) => {
   const categories: { id: string; name: string }[] = [];
-  const voice: { id: string; name: string }[] = [];
-  const text: { id: string; name: string }[] = [];
+  const voice: { id: string; name: string; parentId: string | null }[] = [];
+  const text: { id: string; name: string; parentId: string | null }[] = [];
 
   for (const channel of guild.channels.cache.values()) {
     if (channel.type === ChannelType.GuildCategory) {
@@ -371,12 +371,12 @@ const mapChannelsByType = (guild: Guild) => {
     }
 
     if (channel.type === ChannelType.GuildVoice) {
-      voice.push({ id: channel.id, name: channel.name });
+      voice.push({ id: channel.id, name: channel.name, parentId: channel.parentId });
       continue;
     }
 
     if (channel.type === ChannelType.GuildText) {
-      text.push({ id: channel.id, name: channel.name });
+      text.push({ id: channel.id, name: channel.name, parentId: channel.parentId });
     }
   }
 
@@ -881,7 +881,7 @@ export const startApi = (bot: SyncinkBot) => {
       if (everyone) roles.push({ id: everyone.id, name: everyone.name, color: everyone.hexColor, position: -1, isOrphaned: false });
 
       // Fetch saved roles to detect orphans
-      const settings = await GuildSettings.findOne({ guildId });
+      const settings = await GuildSettings.findOne({ guildId }).lean();
       if (settings?.roleToggles) {
         for (const roleId of Object.keys(settings.roleToggles)) {
           if (!guild.roles.cache.has(roleId)) {
@@ -904,7 +904,7 @@ export const startApi = (bot: SyncinkBot) => {
     try {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
-      const settings = await GuildSettings.findOne({ guildId });
+      const settings = await GuildSettings.findOne({ guildId }).lean();
       const roleToggles = settings?.roleToggles || {};
       return res.json({ roleToggles });
     } catch (error) {

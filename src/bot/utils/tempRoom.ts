@@ -69,10 +69,11 @@ export const buildControlPanelEmbed = (member: GuildMember, dashboardUrl?: strin
         '',
         '**Room Settings** — Name, limit, status, game, bitrate, region, text, NSFW',
         '**Permissions** — Lock, permit, reject, ghost, transfer ownership',
+        ...(settings?.serverBio ? ['', settings.serverBio] : []),
       ].join('\n'),
     )
     .setFooter({
-      text: settings?.serverBio || (dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Syncink Voice • Temporary Voice Channels'),
+      text: dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Syncink Voice • Temporary Voice Channels',
     });
 
   if (settings?.serverBanner) {

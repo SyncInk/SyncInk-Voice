@@ -165,8 +165,8 @@ const SetupCard = ({
   const genCh = channels.find(c => c.id === setup.generatorChannelId);
   const cat = categories.find(c => c.id === setup.categoryId);
   const activeFeatures = Object.entries(setup.features ?? {}).filter(([, v]) => v).length;
-  const genChName = genCh?.name ?? setup._channelName ?? setup.generatorChannelId ?? '—';
-  const catName   = cat?.name  ?? setup._categoryName ?? setup.categoryId ?? '—';
+  const genChName = genCh?.name ?? setup._channelName ?? (setup.generatorChannelId ? '⚠️ Unknown Channel' : '—');
+  const catName   = cat?.name  ?? setup._categoryName ?? (setup.categoryId ? '⚠️ Unknown Category' : '—');
 
   return (
     <div style={{
