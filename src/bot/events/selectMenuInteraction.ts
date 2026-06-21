@@ -219,7 +219,16 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_lfm': {
-      const roomText = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', getDisplayNameParts(member));
+      const roomText = tempChannel.textChannelId
+        ? guild.channels.cache.get(tempChannel.textChannelId) as TextChannel | undefined
+        : null;
+
+      if (!roomText) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('Create a text channel first', 'Use the Text option first, then post an LFM message in the room chat.')],
+          ephemeral: true,
+        });
+      }
 
       await sendWebhookMessage(
         roomText,

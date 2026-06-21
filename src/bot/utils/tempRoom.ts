@@ -178,6 +178,26 @@ export const buildLookingForMembersEmbed = (
 
 const getPanelMarker = (voiceChannelId: string) => `${PANEL_FOOTER_PREFIX} | ${voiceChannelId}`;
 
+const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: ITempChannel) => {
+  const guild = voiceChannel.guild;
+  if (tempChannel.textChannelId) {
+    const textChannel = guild.channels.cache.get(tempChannel.textChannelId);
+    if (textChannel?.type === ChannelType.GuildText) {
+      return textChannel as TextChannel;
+    }
+  }
+
+  const fallbackId = (await GuildSettings.findOne({ guildId: guild.id }).catch(() => null))?.voiceControlChannelId;
+  if (fallbackId) {
+    const fallbackChannel = guild.channels.cache.get(fallbackId);
+    if (fallbackChannel?.type === ChannelType.GuildText) {
+      return fallbackChannel as TextChannel;
+    }
+  }
+
+  return null;
+};
+
 const syncTextChannelAccess = async (textChannel: TextChannel, voiceChannel: VoiceChannel, tempChannel: ITempChannel) => {
   const allowedIds = new Set<string>([tempChannel.ownerId]);
   for (const [memberId] of voiceChannel.members) {
@@ -280,14 +300,32 @@ export const refreshRoomPanel = async (
     voiceChannel.guild.members.cache.get(tempChannel.ownerId)
     ?? (await voiceChannel.guild.members.fetch(tempChannel.ownerId).catch(() => null))
     ?? member;
-  const textChannel = await ensureRoomTextChannel(
-    voiceChannel,
-    tempChannel,
-    'Temporary room control panel',
-    getDisplayNameParts(panelOwner),
-  );
+  let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
+
+  if (tempChannel.textChannelId && !textChannel) {
+    const existingText = voiceChannel.guild.channels.cache.get(tempChannel.textChannelId);
+    if (existingText?.type === ChannelType.GuildText) {
+      textChannel = existingText as TextChannel;
+    }
+  }
+
+  if (!textChannel) {
+    return null;
+  }
 
   await syncTextChannelAccess(textChannel, voiceChannel, tempChannel);
+
+  if (tempChannel.panelMessageId && tempChannel.panelChannelId && tempChannel.panelChannelId !== textChannel.id) {
+    const previousChannel = voiceChannel.guild.channels.cache.get(tempChannel.panelChannelId);
+    const previousMessage = previousChannel?.isTextBased()
+      ? await previousChannel.messages.fetch(tempChannel.panelMessageId).catch(() => null)
+      : null;
+
+    if (previousMessage) {
+      markPanelDeletionIgnored(previousMessage.id);
+      await previousMessage.delete().catch(() => null);
+    }
+  }
 
   const marker = getPanelMarker(voiceChannel.id);
   const recent = await textChannel.messages.fetch({ limit: 50 }).catch(() => null);
@@ -297,32 +335,59 @@ export const refreshRoomPanel = async (
       return footer.includes(marker);
     });
 
+    let first = true;
     for (const message of duplicates.values()) {
-      if (tempChannel.panelMessageId === message.id) {
+      if (first && tempChannel.panelMessageId === message.id) {
+        first = false;
         continue;
       }
 
       markPanelDeletionIgnored(message.id);
       await message.delete().catch(() => null);
-    }
-  }
-
-  if (tempChannel.panelMessageId) {
-    const existingPanel = await textChannel.messages.fetch(tempChannel.panelMessageId).catch(() => null);
-    if (existingPanel) {
-      markPanelDeletionIgnored(existingPanel.id);
-      await existingPanel.delete().catch(() => null);
+      first = false;
     }
   }
 
   const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
+  const payload = {
+    embeds: [panelEmbed],
+    components: [...getPanelButtons(), ...getPanelDropdowns()],
+    allowedMentions: { parse: [] },
+  };
+
+  const existingPanel = tempChannel.panelMessageId
+    ? await textChannel.messages.fetch(tempChannel.panelMessageId).catch(() => null)
+    : null;
+
+  if (existingPanel) {
+    try {
+      await existingPanel.edit(payload);
+      tempChannel.panelChannelId = textChannel.id;
+      await tempChannel.save();
+      return existingPanel;
+    } catch {
+      const sent = await sendWebhookMessage(
+        textChannel,
+        payload,
+        {
+          serverAvatar: guildSettings?.serverAvatar || null,
+          serverNickname: guildSettings?.serverNickname || null,
+          defaultName: panelOwner.guild.client.user?.username,
+        },
+      );
+
+      if (sent instanceof Message) {
+        tempChannel.panelMessageId = sent.id;
+        tempChannel.panelChannelId = textChannel.id;
+        await tempChannel.save();
+        return sent;
+      }
+    }
+  }
+
   const sent = await sendWebhookMessage(
     textChannel,
-    {
-      embeds: [panelEmbed],
-      components: [...getPanelButtons(), ...getPanelDropdowns()],
-      allowedMentions: { parse: [] },
-    },
+    payload,
     {
       serverAvatar: guildSettings?.serverAvatar || null,
       serverNickname: guildSettings?.serverNickname || null,
@@ -331,7 +396,6 @@ export const refreshRoomPanel = async (
   );
 
   if (sent instanceof Message) {
-    await sent.pin().catch(() => null);
     tempChannel.panelMessageId = sent.id;
     tempChannel.panelChannelId = textChannel.id;
     await tempChannel.save();

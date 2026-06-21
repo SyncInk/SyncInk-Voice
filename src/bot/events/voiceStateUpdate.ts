@@ -46,7 +46,10 @@ export const handleVoiceStateUpdate = async (
   const settings = await GuildSettings.findOne({ guildId });
 
   const isGeneratorChannel = newState.channelId
-    ? Boolean(setup || settings?.setupChannelId === newState.channelId)
+    ? Boolean(
+      (setup && newState.channelId === setup.generatorChannelId)
+      || (!setup && settings?.setupChannelId === newState.channelId),
+    )
     : false;
 
   if (newState.channelId && isGeneratorChannel) {
@@ -158,16 +161,24 @@ export const handleVoiceStateUpdate = async (
   }
 
   if (oldState.channelId) {
-    const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId });
-    const oldChannel = guild.channels.cache.get(oldState.channelId);
+      const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId });
+      const oldChannel = guild.channels.cache.get(oldState.channelId);
 
     if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldChannel.members.size === 0) {
       try {
         if (tempChannelData.panelMessageId) {
-          markPanelDeletionIgnored(tempChannelData.panelMessageId);
-        }
+          const panelChannel = tempChannelData.panelChannelId
+            ? guild.channels.cache.get(tempChannelData.panelChannelId)
+            : null;
+          const panelMessage = panelChannel?.isTextBased()
+            ? await panelChannel.messages.fetch(tempChannelData.panelMessageId).catch(() => null)
+            : null;
 
-        await TempChannel.deleteOne({ channelId: oldState.channelId });
+          if (panelMessage) {
+            markPanelDeletionIgnored(panelMessage.id);
+            await panelMessage.delete().catch(() => null);
+          }
+        }
 
         if (tempChannelData.textChannelId) {
           const textChannel = guild.channels.cache.get(tempChannelData.textChannelId);
@@ -176,6 +187,7 @@ export const handleVoiceStateUpdate = async (
           }
         }
 
+        await TempChannel.deleteOne({ channelId: oldState.channelId });
         await oldChannel.delete();
 
         await logEvent({

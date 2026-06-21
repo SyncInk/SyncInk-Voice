@@ -72,7 +72,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       });
     }
 
-    const settings = await GuildSettings.findOneAndUpdate(
+    await GuildSettings.findOneAndUpdate(
       { guildId: guild.id },
       {
         guildId: guild.id,

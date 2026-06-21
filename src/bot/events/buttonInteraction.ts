@@ -186,6 +186,15 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     case 'btn_delete': {
       if (tempChannel.panelMessageId) {
         markPanelDeletionIgnored(tempChannel.panelMessageId);
+        const panelChannel = tempChannel.panelChannelId
+          ? guild.channels.cache.get(tempChannel.panelChannelId)
+          : null;
+        const panelMessage = panelChannel?.isTextBased()
+          ? await panelChannel.messages.fetch(tempChannel.panelMessageId).catch(() => null)
+          : null;
+        if (panelMessage) {
+          await panelMessage.delete().catch(() => null);
+        }
       }
 
       await interaction.reply({ embeds: [buildRoomEmbed('Deleting channel', 'The temporary room is being removed.')], ephemeral: true });
