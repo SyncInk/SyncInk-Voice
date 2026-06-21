@@ -4,6 +4,8 @@ import { InfoBanner } from '../components/layout/InfoBanner';
 import { ThreeToggle } from '../components/ui/ThreeToggle';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
 import type { ToggleState } from '../types';
+import { fetchJsonWithRetry } from '../api';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface Props {
   guildId: string | null;
@@ -48,20 +50,35 @@ export default function RoleToggles({ guildId, addToast }: Props) {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
 
-  useEffect(() => {
+  const [fetchError, setFetchError] = useState(false);
+
+  const loadData = () => {
     if (!guildId) return;
     setLoading(true);
+    setFetchError(false);
+    setAllRoles([]);
+    setProfiles(new Map());
+    setSavedProfiles(new Map());
+    setSelectedId(null);
+    setShowAdd(false);
     Promise.all([
-      fetch(`/api/guilds/${guildId}/roles`, { credentials: 'include' }).then(res => res.json()),
-      fetch(`/api/guilds/${guildId}/role-toggles`, { credentials: 'include' }).then(res => res.json()),
+      fetchJsonWithRetry<{ roles?: DiscordRole[] }>(`/api/guilds/${guildId}/roles`, { credentials: 'include' }),
+      fetchJsonWithRetry<{ roleToggles?: Record<string, Record<string, ToggleState>> }>(`/api/guilds/${guildId}/role-toggles`, { credentials: 'include' }),
     ])
       .then(([rolesData, togglesData]) => {
-        if (rolesData.roles) {
-          setAllRoles(rolesData.roles);
+        if (!rolesData.ok) {
+          throw new Error((rolesData.data as any)?.error || 'Failed to load roles');
         }
-        if (togglesData.roleToggles) {
+        if (!togglesData.ok) {
+          throw new Error((togglesData.data as any)?.error || 'Failed to load role toggles');
+        }
+
+        if (rolesData.data?.roles) {
+          setAllRoles(rolesData.data.roles);
+        }
+        if (togglesData.data?.roleToggles) {
           const map = new Map<string, Record<string, ToggleState>>();
-          for (const [rId, val] of Object.entries(togglesData.roleToggles)) {
+          for (const [rId, val] of Object.entries(togglesData.data.roleToggles)) {
             map.set(rId, val as Record<string, ToggleState>);
           }
           setProfiles(map);
@@ -69,7 +86,14 @@ export default function RoleToggles({ guildId, addToast }: Props) {
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setFetchError(true);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadData();
   }, [guildId]);
 
   const hasChanges = JSON.stringify([...profiles]) !== JSON.stringify([...savedProfiles]);
@@ -101,19 +125,19 @@ export default function RoleToggles({ guildId, addToast }: Props) {
     setSaving(true);
     try {
       const obj = Object.fromEntries(profiles);
-      const res = await fetch(`/api/guilds/${guildId}/role-toggles`, {
+      const result = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/role-toggles`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ roleToggles: obj }),
       });
-      if (!res.ok) {
-        throw new Error('Failed to save role toggles');
+      if (!result.ok) {
+        throw new Error((result.data as any)?.error || 'Failed to save role toggles');
       }
       setSavedProfiles(new Map(profiles));
       addToast('success', 'Role toggles saved successfully!');
     } catch (e) {
-      addToast('error', 'Failed to save role toggles.');
+      addToast('error', e instanceof Error ? e.message : 'Failed to save role toggles.');
     } finally {
       setSaving(false);
     }
@@ -125,9 +149,9 @@ export default function RoleToggles({ guildId, addToast }: Props) {
   if (!guildId) {
     return (
       <div className="page-content">
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, flexDirection:'column', gap:16, color:'var(--text-muted)' }}>
-          <Shield size={48} style={{ opacity:0.3 }} />
-          <div style={{ fontSize:16, fontWeight:600 }}>Select a server from the sidebar</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, flexDirection: 'column', gap: 16, color: 'var(--text-muted)' }}>
+          <Shield size={48} style={{ opacity: 0.3 }} />
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Select a server from the sidebar</div>
         </div>
       </div>
     );
@@ -135,9 +159,23 @@ export default function RoleToggles({ guildId, addToast }: Props) {
 
   if (loading) {
     return (
+      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: 'var(--text-muted)' }}>
+        <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
+        <span>Loading role permissions...</span>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
       <div className="page-content">
-        <div style={{ display:'flex', justifyContent:'center', marginTop:100, color:'var(--primary)' }}>
-          Loading roles...
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 16, background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', textAlign: 'center', marginTop: 40 }}>
+          <div style={{ color: 'var(--error)' }}><AlertTriangle size={32} /></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Failed to load role permissions</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Please try refreshing or check your connection.</div>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={loadData}>Retry</button>
         </div>
       </div>
     );

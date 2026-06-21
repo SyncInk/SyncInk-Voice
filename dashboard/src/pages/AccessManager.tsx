@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Save, Shield, ShieldAlert, ShieldCheck, Plus, X } from 'lucide-react';
+import { Save, Shield, ShieldCheck, Plus, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
+import { fetchJsonWithRetry } from '../api';
 
 interface Role {
   id: string;
@@ -28,37 +29,50 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   
-  useEffect(() => {
+  const [fetchError, setFetchError] = useState(false);
+  
+  const loadData = () => {
     if (!guildId) return;
     setLoading(true);
+    setFetchError(false);
+    setAllowedRoles([]);
+    setAllRoles([]);
+    setShowAdd(false);
     
     Promise.all([
-      fetch(`/api/guilds/${guildId}/roles`, { credentials: 'include' }).then(res => res.json()),
-      fetch(`/api/guilds/${guildId}/access`, { credentials: 'include' }).then(res => res.json())
+      fetchJsonWithRetry<{ roles?: Role[] }>(`/api/guilds/${guildId}/roles`, { credentials: 'include' }),
+      fetchJsonWithRetry<{ allowedRoles?: IAccessRole[] }>(`/api/guilds/${guildId}/access`, { credentials: 'include' })
     ]).then(([rolesData, accessData]) => {
-      setAllRoles(rolesData.roles || []);
-      setAllowedRoles(accessData.allowedRoles || []);
+      if (!rolesData.ok) throw new Error((rolesData.data as any)?.error || 'Failed to load roles');
+      if (!accessData.ok) throw new Error((accessData.data as any)?.error || 'Failed to load access rules');
+
+      setAllRoles(rolesData.data?.roles || []);
+      setAllowedRoles(accessData.data?.allowedRoles || []);
       setLoading(false);
     }).catch(() => {
-      addToast('error', 'Failed to load access roles.');
+      setFetchError(true);
       setLoading(false);
     });
-  }, [guildId, addToast]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [guildId]);
 
   const handleSave = async () => {
     if (!guildId) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/access`, {
+      const res = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/access`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ allowedRoles }),
       });
-      if (!res.ok) throw new Error('Failed to save access rules');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save access rules');
       addToast('success', 'Dashboard access rules saved successfully!');
-    } catch {
-      addToast('error', 'Failed to save access rules.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to save access rules.');
     } finally {
       setSaving(false);
     }
@@ -91,17 +105,32 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
   if (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator') {
     return (
       <div className="page-content">
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, flexDirection:'column', gap:16, color:'var(--text-muted)' }}>
-          <ShieldAlert size={48} style={{ color: 'var(--error)' }} />
-          <div style={{ fontSize:16, fontWeight:600, color: 'var(--text-primary)' }}>Access Denied</div>
-          <div style={{ fontSize:14 }}>You must be the Server Owner or have Administrator permissions to manage Dashboard Access.</div>
-        </div>
+        <InfoBanner message="You need to be an Administrator or Owner to access this page." />
+      </div>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: 'var(--text-muted)' }}>
+        <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
+        <span>Loading access rules...</span>
       </div>
     );
   }
 
-  if (loading) {
-    return <div className="page-content" style={{ display: 'flex', justifyContent: 'center', marginTop: 100, color: 'var(--primary)' }}>Loading access manager...</div>;
+  if (fetchError) {
+    return (
+      <div className="page-content">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 16, background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', textAlign: 'center', marginTop: 40 }}>
+          <div style={{ color: 'var(--error)' }}><AlertTriangle size={32} /></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Failed to load access rules</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Please try refreshing or check your connection.</div>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={loadData}>Retry</button>
+        </div>
+      </div>
+    );
   }
 
   const addableRoles = allRoles.filter(r => !allowedRoles.some(ar => ar.roleId === r.id));

@@ -3,6 +3,8 @@ import { RotateCcw } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
 import { Switch } from '../components/ui/Switch';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
+import { fetchJsonWithRetry } from '../api';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props { 
   guildId: string | null;
@@ -36,32 +38,44 @@ export default function Misc({ guildId, addToast }: Props) {
   const [textChannels, setTextChannels] = useState<{id: string; name: string; parentId: string | null}[]>([]);
   const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
 
+  const [fetchError, setFetchError] = useState(false);
+
   const hasChanges = JSON.stringify(saved) !== JSON.stringify(state);
 
-  useEffect(() => {
+  const loadData = () => {
     if (!guildId) return;
     setLoading(true);
+    setFetchError(false);
+    setTextChannels([]);
+    setCategories([]);
 
     Promise.all([
-      fetch(`/api/guilds/${guildId}/channels`, { credentials: 'include' }).then(res => res.json()),
-      fetch(`/api/guilds/${guildId}/logging`, { credentials: 'include' }).then(res => res.json())
+      fetchJsonWithRetry<{ categories?: { id: string; name: string }[]; text?: { id: string; name: string; parentId: string | null }[] }>(`/api/guilds/${guildId}/channels`, { credentials: 'include' }),
+      fetchJsonWithRetry<{ loggingChannelId?: string | null; loggingEvents?: Record<string, boolean> }>(`/api/guilds/${guildId}/logging`, { credentials: 'include' })
     ]).then(([channelsData, loggingData]) => {
-      setTextChannels(channelsData.text || []);
-      setCategories(channelsData.categories || []);
+      if (!channelsData.ok) throw new Error((channelsData.data as any)?.error || 'Failed to load channels');
+      if (!loggingData.ok) throw new Error((loggingData.data as any)?.error || 'Failed to load logging settings');
+
+      setTextChannels(channelsData.data?.text || []);
+      setCategories(channelsData.data?.categories || []);
       
       const loadedState = {
-        loggingChannelId: loggingData.loggingChannelId || '',
-        loggingEnabled: !!loggingData.loggingChannelId,
-        loggingEvents: { ...initial.loggingEvents, ...(loggingData.loggingEvents || {}) },
+        loggingChannelId: loggingData.data?.loggingChannelId || '',
+        loggingEnabled: !!loggingData.data?.loggingChannelId,
+        loggingEvents: { ...initial.loggingEvents, ...(loggingData.data?.loggingEvents || {}) },
       };
       
       setSaved(loadedState);
       setState(loadedState);
       setLoading(false);
     }).catch(() => {
-      addToast('error', 'Failed to load settings.');
+      setFetchError(true);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadData();
   }, [guildId, addToast]);
 
   const setLogEvent = (key: string, val: boolean) => setState(s => ({ ...s, loggingEvents: { ...s.loggingEvents, [key]: val } }));
@@ -70,7 +84,7 @@ export default function Misc({ guildId, addToast }: Props) {
     if (!guildId) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/logging`, {
+      const res = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/logging`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -79,11 +93,11 @@ export default function Misc({ guildId, addToast }: Props) {
           loggingEvents: state.loggingEvents,
         }),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save logging settings');
       setSaved({ ...state, loggingChannelId: state.loggingEnabled ? state.loggingChannelId : '' });
       addToast('success', 'Logging settings saved successfully!');
-    } catch {
-      addToast('error', 'Failed to save logging settings.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to save logging settings.');
     } finally {
       setSaving(false);
     }
@@ -91,6 +105,21 @@ export default function Misc({ guildId, addToast }: Props) {
 
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading settings...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="page-content">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 16, background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', textAlign: 'center', marginTop: 40 }}>
+          <div style={{ color: 'var(--error)' }}><AlertTriangle size={32} /></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Failed to load settings</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Please try refreshing or check your connection.</div>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={loadData}>Retry</button>
+        </div>
+      </div>
+    );
   }
 
   return (

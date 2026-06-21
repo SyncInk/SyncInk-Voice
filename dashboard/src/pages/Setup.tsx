@@ -5,6 +5,7 @@ import {
   MessageSquare, Users, Lock, Eye, Globe, Volume2, Shield
 } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
+import { fetchJsonWithRetry } from '../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface DiscordChannel { id: string; name: string; type: number; }
@@ -614,25 +615,32 @@ export default function Setup({ guildId, addToast }: Props) {
   const [modal, setModal] = useState<null | (Omit<GuildSetup, '_id' | 'createdAt'> & { _id?: string })>(null);
   const [deleteTarget, setDeleteTarget] = useState<GuildSetup | null>(null);
   const [search, setSearch] = useState('');
+  const [fetchError, setFetchError] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!guildId) return;
     setLoading(true);
+    setFetchError(false);
+    setSetups([]);
+    setChannels([]);
+    setCategories([]);
+    setSearch('');
+    setDeleteTarget(null);
+    setModal(null);
     try {
       const [setupsRes, channelsRes] = await Promise.all([
-        fetch(`/api/guilds/${guildId}/setups`, { credentials: 'include' }),
-        fetch(`/api/guilds/${guildId}/channels`, { credentials: 'include' }),
+        fetchJsonWithRetry<{ setups?: GuildSetup[] }>(`/api/guilds/${guildId}/setups`, { credentials: 'include' }),
+        fetchJsonWithRetry<{ categories?: DiscordChannel[]; voice?: DiscordChannel[]; text?: DiscordChannel[] }>(`/api/guilds/${guildId}/channels`, { credentials: 'include' }),
       ]);
-      if (setupsRes.ok) {
-        const d = await setupsRes.json();
-        setSetups(d.setups ?? []);
-      }
-      if (channelsRes.ok) {
-        const d = await channelsRes.json();
-        setChannels(d.voice ?? []);
-        setCategories(d.categories ?? []);
-      }
-    } catch { /* handled gracefully */ }
+      if (!setupsRes.ok) throw new Error((setupsRes.data as any)?.error || 'Failed to load setups');
+      if (!channelsRes.ok) throw new Error((channelsRes.data as any)?.error || 'Failed to load channels');
+
+      setSetups(setupsRes.data?.setups ?? []);
+      setChannels(channelsRes.data?.voice ?? []);
+      setCategories(channelsRes.data?.categories ?? []);
+    } catch { 
+      setFetchError(true);
+    }
     finally { setLoading(false); }
   }, [guildId]);
 
@@ -735,6 +743,15 @@ export default function Setup({ guildId, addToast }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: 'var(--text-muted)' }}>
           <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
           <span>Loading setups…</span>
+        </div>
+      ) : fetchError ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 16, background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', textAlign: 'center' }}>
+          <div style={{ color: 'var(--error)' }}><AlertTriangle size={32} /></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Failed to load data</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Please try refreshing or check your connection.</div>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={loadData}>Retry</button>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '60px 20px', background: 'var(--bg-card)', borderRadius: 14, border: '1px dashed var(--border)', textAlign: 'center' }}>

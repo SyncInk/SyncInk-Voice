@@ -117,6 +117,21 @@ export default function App() {
     } catch { /* ignore */ }
   }, []);
 
+  useEffect(() => {
+    if (guilds.length === 0) {
+      setSelectedGuild(null);
+      return;
+    }
+
+    setSelectedGuild(current => {
+      const savedId = localStorage.getItem('syncink_selected_guild');
+      const next = guilds.find(g => g.id === current?.id)
+        ?? guilds.find(g => g.id === savedId)
+        ?? guilds[0];
+      return next ?? null;
+    });
+  }, [guilds]);
+
   // On mount, check if already logged in (cookie session)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -155,6 +170,7 @@ export default function App() {
     setUser(null);
     setGuilds([]);
     setSelectedGuild(null);
+    localStorage.removeItem('syncink_selected_guild');
     addToast('info', 'You have been logged out.');
   }, []);
 

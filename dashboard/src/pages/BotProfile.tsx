@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Camera, FileText, Lock, AlertTriangle, Loader2 } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
+import { fetchJsonWithRetry } from '../api';
 
 type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Member';
 
@@ -49,24 +50,29 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
 
   // Load bot profile for this server
   useEffect(() => {
-    if (!guildId) { setLoading(false); return; }
+    if (!guildId) {
+      setLoading(false);
+      setSaved(empty);
+      setState(empty);
+      setServerAvatar('');
+      setServerBanner('');
+      return;
+    }
     setLoading(true);
-    fetch(`/api/guilds/${guildId}/bot-profile`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d) {
-          const prof = {
-            nickname: d.nickname ?? '',
-            bio: d.bio ?? '',
-            avatarUrl: d.avatarUrl ?? '',
-            serverAvatarUrl: d.serverAvatarUrl ?? '',
-            defaultName: d.defaultName ?? 'Syncink Voice',
-          };
-          setSaved(prof);
-          setState(prof);
-          setServerAvatar(d.serverAvatarUrl || '');
-          setServerBanner(d.serverBannerUrl || '');
-        }
+    fetchJsonWithRetry<{ nickname?: string; bio?: string; avatarUrl?: string; serverAvatarUrl?: string; serverBannerUrl?: string; defaultName?: string }>(`/api/guilds/${guildId}/bot-profile`, { credentials: 'include' })
+      .then(({ ok, data }) => {
+        if (!ok || !data) throw new Error('Failed to load bot profile');
+        const prof = {
+          nickname: data.nickname ?? '',
+          bio: data.bio ?? '',
+          avatarUrl: data.avatarUrl ?? '',
+          serverAvatarUrl: data.serverAvatarUrl ?? '',
+          defaultName: data.defaultName ?? 'Syncink Voice',
+        };
+        setSaved(prof);
+        setState(prof);
+        setServerAvatar(data.serverAvatarUrl || '');
+        setServerBanner(data.serverBannerUrl || '');
       })
       .catch(() => null)
       .finally(() => setLoading(false));
@@ -77,14 +83,13 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
     setSaving(true);
     setError('');
     try {
-      const res = await fetch(`/api/guilds/${guildId}/bot-profile`, {
+      const res = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/bot-profile`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: state.nickname, bio: state.bio }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save bot profile');
       setSaved({ ...state });
       addToast('success', 'Bot profile updated for this server!');
     } catch (err) {
@@ -140,13 +145,13 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
     setAvatarUploading(true);
     try {
       const base64 = await processImage(file, 512, 512);
-      const res = await fetch(`/api/guilds/${guildId}/branding`, {
+      const res = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/branding`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ serverAvatar: base64 }),
       });
-      if (!res.ok) throw new Error('Avatar upload failed');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Avatar upload failed');
       setServerAvatar(base64);
       addToast('success', 'Server Avatar updated successfully!');
     } catch (err) {
@@ -166,13 +171,13 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
     setBannerUploading(true);
     try {
       const base64 = await processImage(file, 1024, 512);
-      const res = await fetch(`/api/guilds/${guildId}/branding`, {
+      const res = await fetchJsonWithRetry<{ success?: boolean; error?: string }>(`/api/guilds/${guildId}/branding`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ serverBanner: base64 }),
       });
-      if (!res.ok) throw new Error('Banner upload failed');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Banner upload failed');
       setServerBanner(base64);
       addToast('success', 'Server Banner updated successfully!');
     } catch (err) {
