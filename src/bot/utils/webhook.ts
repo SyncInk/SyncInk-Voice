@@ -52,29 +52,10 @@ export async function sendWebhookMessage(
   content: string | MessagePayload | MessageCreateOptions,
   branding: WebhookBrandingOptions
 ) {
-  const webhook = await getOrCreateWebhook(channel);
-
-  if (webhook) {
-    const webhookClient = new WebhookClient({ id: webhook.id, token: webhook.token! });
-
-    try {
-      const options = typeof content === 'string' ? { content } : { ...content };
-
-      // Set custom branding
-      const payload: any = {
-        ...options,
-        username: branding.serverNickname || branding.defaultName || channel.client.user?.username,
-        avatarURL: branding.serverAvatar || branding.defaultAvatar || channel.client.user?.displayAvatarURL(),
-      };
-
-      const message = await webhook.send(payload);
-      return message;
-    } catch (error) {
-      console.error(`[Webhook Utils] Failed to send webhook message in channel ${channel.id}:`, error);
-      // Fallback
-    }
-  }
-
-  // Fallback to standard bot message
-  return channel.send(content);
+  // Webhooks are currently bypassed as requested to fix silent API rejection errors
+  // with custom avatars or missing webhook permissions on self-hosted instances.
+  return channel.send(content).catch((error) => {
+    console.error(`[Webhook Utils] channel.send failed in channel ${channel.id}:`, error);
+    return null;
+  });
 }
