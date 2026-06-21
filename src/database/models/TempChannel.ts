@@ -14,6 +14,8 @@ export interface ITempChannel extends Document {
   bitrate: number;
   status: string | null;
   isNsfw: boolean;
+  panelMessageId?: string | null;
+  panelChannelId?: string | null;
 }
 
 const TempChannelSchema = new Schema<ITempChannel>({
@@ -30,6 +32,8 @@ const TempChannelSchema = new Schema<ITempChannel>({
   bitrate: { type: Number, default: 64000 },
   status: { type: String, default: null },
   isNsfw: { type: Boolean, default: false },
+  panelMessageId: { type: String, default: null },
+  panelChannelId: { type: String, default: null },
 });
 
 export const TempChannel = model<ITempChannel>('TempChannel', TempChannelSchema);

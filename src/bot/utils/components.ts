@@ -9,6 +9,10 @@ export const getPanelButtons = () => {
       .setEmoji('⚙️')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
+      .setCustomId('btn_refresh_panel')
+      .setLabel('Refresh Panel')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setLabel('Dashboard')
       .setURL(ENV.DASHBOARD_URL || 'https://discord.com')
       .setStyle(ButtonStyle.Link),

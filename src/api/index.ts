@@ -10,6 +10,7 @@ import { TempChannel } from '../database/models/TempChannel';
 import { GuildSetup } from '../database/models/GuildSetup';
 import { DashboardAccess } from '../database/models/DashboardAccess';
 import { SyncinkBot } from '../bot/bot';
+import { refreshGuildPanels } from '../bot/utils/tempRoom';
 
 
 const SESSION_COOKIE_NAME = 'syncink_session';
@@ -522,6 +523,22 @@ const getActiveRooms = async (guild: Guild) => {
   );
 };
 
+const refreshActiveRoomPanels = async (bot: SyncinkBot, guildId: string) => {
+  const guild = bot.guilds.cache.get(guildId);
+  if (!guild) {
+    return;
+  }
+
+  const tempChannels = await TempChannel.find({ guildId }).catch(() => []);
+  if (!tempChannels.length) {
+    return;
+  }
+
+  await refreshGuildPanels(guild, tempChannels, ENV.DASHBOARD_URL || undefined).catch((error) => {
+    console.error(`[API] Failed to refresh room panels for ${guildId}:`, error);
+  });
+};
+
 export const startApi = (bot: SyncinkBot) => {
   const app = express();
   const allowedOrigins = new Set<string>(['http://localhost:5173', 'http://127.0.0.1:5173']);
@@ -791,6 +808,7 @@ export const startApi = (bot: SyncinkBot) => {
       );
 
       invalidateGuildCache(guildId);
+      void refreshActiveRoomPanels(bot, guildId).catch(() => null);
       return res.json({ success: true });
     } catch (error) {
       console.error('[API] Failed to update bot profile:', error);
@@ -839,6 +857,7 @@ export const startApi = (bot: SyncinkBot) => {
       );
 
       invalidateGuildCache(guildId);
+      void refreshActiveRoomPanels(bot, guildId).catch(() => null);
       return res.json({ success: true });
     } catch (error) {
       console.error('[API] Failed to update branding:', error);

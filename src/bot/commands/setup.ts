@@ -2,17 +2,12 @@ import {
   CategoryChannel,
   ChannelType,
   ChatInputCommandInteraction,
-  GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
   TextChannel,
   VoiceChannel,
 } from 'discord.js';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildControlPanelEmbed } from '../utils/tempRoom';
-import { getPanelButtons, getPanelDropdowns } from '../utils/components';
-import { sendWebhookMessage } from '../utils/webhook';
-import { ENV } from '../../config/config';
 
 export const data = new SlashCommandBuilder()
   .setName('setup')
@@ -88,22 +83,8 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       { upsert: true, new: true },
     );
 
-    const panelMember = interaction.guild.members.cache.get(interaction.user.id) as GuildMember | undefined;
-    if (!panelMember) {
-      await interaction.editReply({ content: 'Could not resolve your guild member data.' });
-      return;
-    }
-
-    const embed = buildControlPanelEmbed(panelMember, ENV.DASHBOARD_URL || undefined, settings);
-
-    const components = [...getPanelButtons(), ...getPanelDropdowns()];
-    await sendWebhookMessage(controlChannel, { embeds: [embed], components }, {
-      serverAvatar: settings.serverAvatar,
-      serverNickname: settings.serverNickname,
-    });
-
     await interaction.editReply({
-      content: `Syncink Voice is ready. The Join to Create voice channel is in ${category} and the control panel is in ${controlChannel}.`,
+      content: `Syncink Voice is ready. The Join to Create voice channel is in ${category} and room controls will appear inside each room's linked text chat.`,
     });
   } catch (error) {
     console.error('[Setup] Error:', error);

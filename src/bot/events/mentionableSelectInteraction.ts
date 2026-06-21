@@ -1,17 +1,28 @@
 import { MentionableSelectMenuInteraction, VoiceChannel } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
-import { buildRoomEmbed } from '../utils/tempRoom';
+import { GuildSettings } from '../../database/models/GuildSettings';
+import { buildRoomEmbed, refreshRoomPanel } from '../utils/tempRoom';
+import { ENV } from '../../config/config';
 
-export const handleMentionableSelectMenuInteraction = async (interaction: MentionableSelectMenuInteraction) => {
-  const member = interaction.guild?.members.cache.get(interaction.user.id);
-  if (!member || !member.voice.channelId) {
-    return interaction.reply({
-      embeds: [buildRoomEmbed('Join a voice channel first')],
-      ephemeral: true,
-    });
+const getTempChannelFromInteraction = async (interaction: MentionableSelectMenuInteraction) => {
+  if (!interaction.channelId) {
+    return null;
   }
 
-  const tempChannel = await TempChannel.findOne({ channelId: member.voice.channelId });
+  return TempChannel.findOne({
+    $or: [{ panelChannelId: interaction.channelId }, { textChannelId: interaction.channelId }],
+  });
+};
+
+export const handleMentionableSelectMenuInteraction = async (interaction: MentionableSelectMenuInteraction) => {
+  const guild = interaction.guild;
+  const member = guild?.members.cache.get(interaction.user.id);
+
+  if (!guild || !member) {
+    return;
+  }
+
+  const tempChannel = await getTempChannelFromInteraction(interaction);
   if (!tempChannel || tempChannel.ownerId !== interaction.user.id) {
     return interaction.reply({
       embeds: [buildRoomEmbed('Owner only', 'Only the current room owner can use these controls.')],
@@ -19,17 +30,18 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     });
   }
 
-  const channel = interaction.guild?.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
+  const channel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!channel) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('Voice channel missing')],
+      embeds: [buildRoomEmbed('Voice channel missing') ],
       ephemeral: true,
     });
   }
 
+  const settings = await GuildSettings.findOne({ guildId: guild.id }).catch(() => null);
   const targetId = interaction.values[0];
   const isRole = interaction.roles.has(targetId);
-  const targetMember = interaction.guild?.members.cache.get(targetId);
+  const targetMember = guild.members.cache.get(targetId);
   const mention = `<@${isRole ? '&' : ''}${targetId}>`;
 
   try {
@@ -41,11 +53,11 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await tempChannel.save();
       await channel.permissionOverwrites.edit(targetId, { Connect: true, ViewChannel: true });
 
-      await interaction.update({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+      return interaction.update({
         embeds: [buildRoomEmbed('Access permitted', `${mention} can now access the room.`)],
         components: [],
       });
-      return;
     }
 
     if (interaction.customId === 'mentionable_opt_invite') {
@@ -78,11 +90,11 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         ],
       }).catch(() => null);
 
-      await interaction.update({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+      return interaction.update({
         embeds: [buildRoomEmbed('Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
         components: [],
       });
-      return;
     }
 
     if (interaction.customId === 'mentionable_opt_reject' || interaction.customId === 'mentionable_opt_kick') {
@@ -108,11 +120,11 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         }
       }
 
-      await interaction.update({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+      return interaction.update({
         embeds: [buildRoomEmbed('Access rejected', `${mention} can no longer access the room.`)],
         components: [],
       });
-      return;
     }
 
     if (interaction.customId === 'mentionable_opt_transfer') {
@@ -133,11 +145,12 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       tempChannel.ownerId = targetId;
       await tempChannel.save();
 
+      await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.update({
         embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         components: [],
       });
-      await channel.send({ embeds: [buildRoomEmbed('New room owner', `<@${targetId}> is now the owner of this room.`)] });
+      await channel.send({ embeds: [buildRoomEmbed('New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
     }
   } catch (error) {
     console.error('[MentionableSelect] Error:', error);
