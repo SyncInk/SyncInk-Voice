@@ -15,6 +15,7 @@ import { sendWebhookMessage } from '../utils/webhook';
 import {
   buildLookingForMembersEmbed,
   buildRoomEmbed,
+  clearOwnershipWarning,
   ensureRoomTextChannel,
   getCurrentGameName,
   getDisplayNameParts,
@@ -149,6 +150,24 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         embeds: [buildRoomEmbed('Owner is still here', 'You can only claim this room after the current owner leaves.')],
         ephemeral: true,
       });
+    }
+
+    const warningExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() || 0;
+    if (warningExpiresAt && warningExpiresAt > Date.now()) {
+      const remainingSeconds = Math.ceil((warningExpiresAt - Date.now()) / 1000);
+      return interaction.reply({
+        embeds: [
+          buildRoomEmbed(
+            'Ownership protection active',
+            `Please wait **${remainingSeconds} seconds** before claiming this room.`,
+          ),
+        ],
+        ephemeral: true,
+      });
+    }
+
+    if (warningExpiresAt && warningExpiresAt <= Date.now()) {
+      await clearOwnershipWarning(guild, tempChannel, 'transferred');
     }
 
     tempChannel.ownerId = interaction.user.id;

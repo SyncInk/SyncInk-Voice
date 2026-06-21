@@ -1,6 +1,6 @@
 import { SyncinkBot } from '../bot';
 import { TempChannel } from '../../database/models/TempChannel';
-import { refreshGuildPanels } from '../utils/tempRoom';
+import { refreshGuildPanels, restoreOwnershipWarnings } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
 
 export const handleReady = async (client: SyncinkBot) => {
@@ -15,6 +15,10 @@ export const handleReady = async (client: SyncinkBot) => {
 
     await refreshGuildPanels(guild, tempChannels, ENV.DASHBOARD_URL || undefined).catch((error) => {
       console.error(`[Bot] Failed to restore panels for ${guild.id}:`, error);
+    });
+
+    await restoreOwnershipWarnings(guild, tempChannels, ENV.DASHBOARD_URL || undefined).catch((error) => {
+      console.error(`[Bot] Failed to restore ownership warnings for ${guild.id}:`, error);
     });
   }
 };

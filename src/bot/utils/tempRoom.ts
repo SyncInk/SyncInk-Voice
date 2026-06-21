@@ -8,7 +8,7 @@ import {
   TextChannel,
   VoiceChannel,
 } from 'discord.js';
-import { ITempChannel } from '../../database/models/TempChannel';
+import { TempChannel, ITempChannel } from '../../database/models/TempChannel';
 import { GuildSettings, IGuildSettings } from '../../database/models/GuildSettings';
 import { ENV } from '../../config/config';
 import { sendWebhookMessage } from './webhook';
@@ -16,6 +16,8 @@ import { getPanelButtons, getPanelDropdowns } from './components';
 
 const PANEL_FOOTER_PREFIX = 'SyncInk Panel';
 const ignoredPanelDeletes = new Set<string>();
+const OWNER_WARNING_DURATION_MS = 3 * 60 * 1000;
+const ownershipWarningTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const markPanelDeletionIgnored = (messageId: string) => {
   ignoredPanelDeletes.add(messageId);
@@ -39,6 +41,17 @@ export const getDisplayNameParts = (member: GuildMember) => {
     .slice(0, 2);
 
   return parts.length ? parts.join(' ') : member.user.username;
+};
+
+const getOwnershipWarningKey = (guildId: string, channelId: string) => `${guildId}:${channelId}`;
+
+const clearOwnershipWarningTimer = (guildId: string, channelId: string) => {
+  const key = getOwnershipWarningKey(guildId, channelId);
+  const timer = ownershipWarningTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    ownershipWarningTimers.delete(key);
+  }
 };
 
 export const formatRoomName = (template: string, member: GuildMember) => {
@@ -187,16 +200,63 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
     }
   }
 
-  const fallbackId = (await GuildSettings.findOne({ guildId: guild.id }).catch(() => null))?.voiceControlChannelId;
-  if (fallbackId) {
-    const fallbackChannel = guild.channels.cache.get(fallbackId);
-    if (fallbackChannel?.type === ChannelType.GuildText) {
-      return fallbackChannel as TextChannel;
-    }
-  }
-
   return null;
 };
+
+const buildOwnerLeftWarningEmbed = (roomName: string) =>
+  new EmbedBuilder()
+    .setColor(0xf59e0b)
+    .setTitle(':sync_alert~1: Owner Left Voice Channel')
+    .setDescription(
+      [
+        'The current room owner has left the voice channel.',
+        '',
+        'They have 3 minutes to rejoin before ownership becomes available for transfer.',
+      ].join('\n'),
+    )
+    .addFields({
+      name: 'Room',
+      value: roomName,
+      inline: true,
+    })
+    .setFooter({ text: ':sync_alert: Ownership protection timer active.' })
+    .setTimestamp();
+
+const buildOwnerReturnedEmbed = (roomName: string) =>
+  new EmbedBuilder()
+    .setColor(0x57f287)
+    .setTitle('Ownership protection restored')
+    .setDescription('The room owner returned in time, so ownership protection has been cancelled.')
+    .addFields({
+      name: 'Room',
+      value: roomName,
+      inline: true,
+    })
+    .setTimestamp();
+
+const buildOwnershipExpiredEmbed = (roomName: string) =>
+  new EmbedBuilder()
+    .setColor(0xfee75c)
+    .setTitle('Ownership transfer available')
+    .setDescription('The 3-minute protection window expired. Ownership can now be transferred if needed.')
+    .addFields({
+      name: 'Room',
+      value: roomName,
+      inline: true,
+    })
+    .setTimestamp();
+
+const buildOwnershipTransferredEmbed = (roomName: string) =>
+  new EmbedBuilder()
+    .setColor(0x8b5cf6)
+    .setTitle('Ownership transferred')
+    .setDescription('Room ownership has been handed over successfully.')
+    .addFields({
+      name: 'Room',
+      value: roomName,
+      inline: true,
+    })
+    .setTimestamp();
 
 const syncTextChannelAccess = async (textChannel: TextChannel, voiceChannel: VoiceChannel, tempChannel: ITempChannel) => {
   const allowedIds = new Set<string>([tempChannel.ownerId]);
@@ -288,6 +348,226 @@ export const ensureRoomTextChannel = async (
   return textChannel;
 };
 
+const sendOwnershipWarningMessage = async (
+  voiceChannel: VoiceChannel,
+  tempChannel: ITempChannel,
+  member: GuildMember,
+  settings?: IGuildSettings | null,
+) => {
+  const textChannel = await ensureRoomTextChannel(
+    voiceChannel,
+    tempChannel,
+    'Temporary voice room chat',
+    getDisplayNameParts(member),
+  );
+
+  const warningEmbed = buildOwnerLeftWarningEmbed(voiceChannel.name);
+  const sent = await sendWebhookMessage(
+    textChannel,
+    { embeds: [warningEmbed] },
+    {
+      serverAvatar: settings?.serverAvatar || null,
+      serverNickname: settings?.serverNickname || null,
+      defaultName: voiceChannel.guild.client.user?.username,
+    },
+  );
+
+  if (sent instanceof Message) {
+    tempChannel.ownerWarningMessageId = sent.id;
+    await tempChannel.save();
+  }
+
+  return textChannel;
+};
+
+const scheduleOwnershipWarningExpiry = (
+  guild: Guild,
+  tempChannel: ITempChannel,
+  dashboardUrl?: string,
+) => {
+  clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
+
+  if (!tempChannel.ownerWarningExpiresAt) {
+    return;
+  }
+
+  const delay = tempChannel.ownerWarningExpiresAt.getTime() - Date.now();
+  if (delay <= 0) {
+    void expireOwnershipWarning(guild, tempChannel.channelId, dashboardUrl);
+    return;
+  }
+
+  const key = getOwnershipWarningKey(guild.id, tempChannel.channelId);
+  ownershipWarningTimers.set(
+    key,
+    setTimeout(() => {
+      void expireOwnershipWarning(guild, tempChannel.channelId, dashboardUrl);
+    }, delay),
+  );
+};
+
+const expireOwnershipWarning = async (guild: Guild, channelId: string, dashboardUrl?: string) => {
+  const tempChannel = await TempChannel.findOne({ guildId: guild.id, channelId }).catch(() => null);
+
+  if (!tempChannel) {
+    clearOwnershipWarningTimer(guild.id, channelId);
+    return;
+  }
+
+  clearOwnershipWarningTimer(guild.id, channelId);
+
+  const voiceChannel = guild.channels.cache.get(channelId);
+  if (!voiceChannel || !voiceChannel.isVoiceBased()) {
+    tempChannel.ownerWarningMessageId = null;
+    tempChannel.ownerWarningExpiresAt = null;
+    await tempChannel.save().catch(() => null);
+    return;
+  }
+
+  if (voiceChannel.members.has(tempChannel.ownerId)) {
+    tempChannel.ownerWarningMessageId = null;
+    tempChannel.ownerWarningExpiresAt = null;
+    await tempChannel.save().catch(() => null);
+    return;
+  }
+
+  const textChannel = await getPanelTargetChannel(voiceChannel as VoiceChannel, tempChannel);
+  const roomTextChannel = textChannel || await ensureRoomTextChannel(
+    voiceChannel as VoiceChannel,
+    tempChannel,
+    'Temporary voice room chat',
+  ).catch(() => null);
+
+  if (roomTextChannel && tempChannel.ownerWarningMessageId) {
+    const warningMessage = await roomTextChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
+    if (warningMessage) {
+      await warningMessage.edit({
+        embeds: [buildOwnershipExpiredEmbed(voiceChannel.name)],
+        components: [],
+        allowedMentions: { parse: [] },
+      }).catch(() => null);
+    }
+  } else if (roomTextChannel) {
+    await sendWebhookMessage(
+      roomTextChannel,
+      { embeds: [buildOwnershipExpiredEmbed(voiceChannel.name)] },
+      {
+        defaultName: guild.client.user?.username,
+      },
+    ).catch(() => null);
+  }
+
+  tempChannel.ownerWarningMessageId = null;
+  tempChannel.ownerWarningExpiresAt = null;
+  await tempChannel.save().catch(() => null);
+};
+
+export const ensureOwnershipWarning = async (
+  voiceChannel: VoiceChannel,
+  tempChannel: ITempChannel,
+  member: GuildMember,
+  settings?: IGuildSettings | null,
+  dashboardUrl?: string,
+) => {
+  const existingExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() ?? 0;
+  const now = Date.now();
+
+  if (existingExpiresAt && existingExpiresAt > now) {
+    const textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
+    const roomTextChannel = textChannel || await ensureRoomTextChannel(
+      voiceChannel,
+      tempChannel,
+      'Temporary voice room chat',
+      getDisplayNameParts(member),
+    ).catch(() => null);
+
+    if (roomTextChannel && tempChannel.ownerWarningMessageId) {
+      const existingWarning = await roomTextChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
+      if (existingWarning) {
+        scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
+        return tempChannel;
+      }
+    }
+
+    if (roomTextChannel) {
+      await sendOwnershipWarningMessage(voiceChannel, tempChannel, member, settings).catch(() => null);
+    }
+
+    scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
+    return tempChannel;
+  }
+
+  tempChannel.ownerWarningExpiresAt = new Date(now + OWNER_WARNING_DURATION_MS);
+  await tempChannel.save();
+
+  await sendOwnershipWarningMessage(voiceChannel, tempChannel, member, settings).catch(async () => {
+    // Keep the warning active even if Discord briefly fails so it can be restored later.
+    await tempChannel.save().catch(() => null);
+  });
+
+  scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
+  return tempChannel;
+};
+
+export const clearOwnershipWarning = async (
+  guild: Guild,
+  tempChannel: ITempChannel,
+  reason: 'returned' | 'transferred' = 'returned',
+) => {
+  clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
+
+  const voiceChannel = guild.channels.cache.get(tempChannel.channelId);
+  const textChannel = tempChannel.textChannelId
+    ? guild.channels.cache.get(tempChannel.textChannelId)
+    : null;
+
+  if (textChannel?.isTextBased() && tempChannel.ownerWarningMessageId) {
+    const warningMessage = await textChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
+    if (warningMessage) {
+      const embed = reason === 'returned'
+        ? buildOwnerReturnedEmbed(voiceChannel?.name || 'Temporary Voice Channel')
+        : buildOwnershipTransferredEmbed(voiceChannel?.name || 'Temporary Voice Channel');
+
+      await warningMessage.edit({
+        embeds: [embed],
+        components: [],
+        allowedMentions: { parse: [] },
+      }).catch(() => null);
+    }
+  }
+
+  tempChannel.ownerWarningMessageId = null;
+  tempChannel.ownerWarningExpiresAt = null;
+  await tempChannel.save().catch(() => null);
+};
+
+export const restoreOwnershipWarnings = async (guild: Guild, tempChannels: ITempChannel[], dashboardUrl?: string) => {
+  for (const tempChannel of tempChannels) {
+    if (!tempChannel.ownerWarningExpiresAt) {
+      clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
+      continue;
+    }
+
+    const voiceChannel = guild.channels.cache.get(tempChannel.channelId);
+    if (!voiceChannel || !voiceChannel.isVoiceBased()) {
+      clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
+      continue;
+    }
+
+    const owner = await guild.members.fetch(tempChannel.ownerId).catch(() => null);
+    if (owner && voiceChannel.members.has(owner.id)) {
+      await clearOwnershipWarning(guild, tempChannel, 'returned');
+      continue;
+    }
+
+    if (owner) {
+      await ensureOwnershipWarning(voiceChannel as VoiceChannel, tempChannel, owner, null, dashboardUrl).catch(() => null);
+    } else {
+      scheduleOwnershipWarningExpiry(guild, tempChannel, dashboardUrl);
+    }
+  }
+};
+
 export const refreshRoomPanel = async (
   voiceChannel: VoiceChannel,
   tempChannel: ITempChannel,
@@ -302,11 +582,13 @@ export const refreshRoomPanel = async (
     ?? member;
   let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
 
-  if (tempChannel.textChannelId && !textChannel) {
-    const existingText = voiceChannel.guild.channels.cache.get(tempChannel.textChannelId);
-    if (existingText?.type === ChannelType.GuildText) {
-      textChannel = existingText as TextChannel;
-    }
+  if (!textChannel) {
+    textChannel = await ensureRoomTextChannel(
+      voiceChannel,
+      tempChannel,
+      'Temporary voice room chat',
+      getDisplayNameParts(panelOwner),
+    );
   }
 
   if (!textChannel) {

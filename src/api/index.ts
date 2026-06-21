@@ -660,14 +660,19 @@ export const startApi = (bot: SyncinkBot) => {
     const session = req.session!;
 
     try {
-      let profile = await UserProfile.findOne({ userId: session.user.id });
+      let profile = await UserProfile.findOne({ userId: session.user.id }).catch(() => null);
       if (!profile) {
-        profile = await UserProfile.create({ userId: session.user.id });
+        profile = await UserProfile.create({ userId: session.user.id }).catch(() => null);
       }
 
       const manageableGuildsResult = await getManageableGuildsSafely(bot, session.user, session.accessToken);
-      const activeRoomsOwned = await TempChannel.countDocuments({ ownerId: session.user.id });
-      const activeRoomsGlobal = await TempChannel.countDocuments();
+      const activeRoomsOwned = await TempChannel.countDocuments({ ownerId: session.user.id }).catch(() => 0);
+      const activeRoomsGlobal = await TempChannel.countDocuments().catch(() => 0);
+      const profileData = profile || {
+        defaultName: '',
+        defaultLimit: null,
+        defaultBitrate: null,
+      };
 
       res.json({
         user: {
@@ -677,9 +682,9 @@ export const startApi = (bot: SyncinkBot) => {
           avatarUrl: buildAvatarUrl(session.user),
         },
         settings: {
-          defaultName: profile.defaultName,
-          defaultLimit: profile.defaultLimit,
-          defaultBitrate: profile.defaultBitrate,
+          defaultName: profileData.defaultName,
+          defaultLimit: profileData.defaultLimit,
+          defaultBitrate: profileData.defaultBitrate,
         },
         overview: {
           managedGuilds: manageableGuildsResult.guilds.length,
@@ -690,7 +695,25 @@ export const startApi = (bot: SyncinkBot) => {
       });
     } catch (error) {
       console.error('[API] Failed to fetch user profile:', error);
-      res.status(500).json({ error: 'Failed to fetch profile' });
+      res.json({
+        user: {
+          id: session.user.id,
+          username: session.user.username,
+          globalName: session.user.global_name,
+          avatarUrl: buildAvatarUrl(session.user),
+        },
+        settings: {
+          defaultName: '',
+          defaultLimit: null,
+          defaultBitrate: null,
+        },
+        overview: {
+          managedGuilds: 0,
+          activeRoomsOwned: 0,
+          activeRoomsGlobal: 0,
+        },
+        guildsUnavailable: true,
+      });
     }
   });
 

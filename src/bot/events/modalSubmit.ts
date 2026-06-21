@@ -1,7 +1,7 @@
 import { ModalSubmitInteraction, TextChannel, VoiceChannel } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildRoomEmbed, refreshRoomPanel, toTextChannelName } from '../utils/tempRoom';
+import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, toTextChannelName } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
 
 const getTempChannelFromModal = async (interaction: ModalSubmitInteraction) => {
@@ -132,6 +132,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
 
       tempChannel.ownerId = targetId;
       await tempChannel.save();
+      await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
         embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],

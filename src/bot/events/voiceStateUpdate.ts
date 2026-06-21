@@ -7,6 +7,8 @@ import { UserProfile } from '../../database/models/UserProfile';
 import {
   formatRoomName,
   getDisplayNameParts,
+  clearOwnershipWarning,
+  ensureOwnershipWarning,
   refreshRoomPanel,
   markPanelDeletionIgnored,
 } from '../utils/tempRoom';
@@ -144,6 +146,10 @@ export const handleVoiceStateUpdate = async (
     if (tempChannel && voiceChannel?.isVoiceBased()) {
       const owner = await getOwnerMember(guild, tempChannel.ownerId, member);
       if (owner) {
+        if (tempChannel.ownerWarningExpiresAt) {
+          await clearOwnershipWarning(guild, tempChannel, 'returned');
+        }
+
         await refreshRoomPanel(voiceChannel, tempChannel, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       }
     }
@@ -201,6 +207,10 @@ export const handleVoiceStateUpdate = async (
         console.error('[VoiceState] Error deleting empty temp channel:', error);
       }
     } else if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldState.channelId !== newState.channelId) {
+      if (oldState.member && tempChannelData.ownerId === oldState.member.id && oldChannel.members.size > 0) {
+        await ensureOwnershipWarning(oldChannel as VoiceChannel, tempChannelData, oldState.member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      }
+
       const owner = await getOwnerMember(guild, tempChannelData.ownerId, member);
       if (owner) {
         await refreshRoomPanel(oldChannel as VoiceChannel, tempChannelData, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);

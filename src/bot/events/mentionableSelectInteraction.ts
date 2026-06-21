@@ -1,7 +1,7 @@
 import { MentionableSelectMenuInteraction, VoiceChannel } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildRoomEmbed, refreshRoomPanel } from '../utils/tempRoom';
+import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
 
 const getTempChannelFromInteraction = async (interaction: MentionableSelectMenuInteraction) => {
@@ -144,6 +144,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       tempChannel.ownerId = targetId;
       await tempChannel.save();
+      await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.update({

@@ -16,6 +16,8 @@ export interface ITempChannel extends Document {
   isNsfw: boolean;
   panelMessageId?: string | null;
   panelChannelId?: string | null;
+  ownerWarningMessageId?: string | null;
+  ownerWarningExpiresAt?: Date | null;
 }
 
 const TempChannelSchema = new Schema<ITempChannel>({
@@ -34,6 +36,8 @@ const TempChannelSchema = new Schema<ITempChannel>({
   isNsfw: { type: Boolean, default: false },
   panelMessageId: { type: String, default: null },
   panelChannelId: { type: String, default: null },
+  ownerWarningMessageId: { type: String, default: null },
+  ownerWarningExpiresAt: { type: Date, default: null },
 });
 
 export const TempChannel = model<ITempChannel>('TempChannel', TempChannelSchema);
