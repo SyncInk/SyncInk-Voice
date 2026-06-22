@@ -25,30 +25,30 @@ export const getPanelDropdowns = () => {
     .setCustomId('menu_settings')
     .setPlaceholder('Change the look of your room')
     .addOptions(
-      { label: 'Name', description: 'Change the channel name', value: 'opt_rename', emoji: '📝' },
-      { label: 'Limit', description: 'Change the channel user limit', value: 'opt_limit', emoji: '👥' },
-      { label: 'Status', description: 'Change the channel status/topic', value: 'opt_status', emoji: '💬' },
-      { label: 'Game', description: "Rename the channel to the game you're playing", value: 'opt_game', emoji: '🎮' },
-      { label: 'LFM', description: 'Post a looking-for-members message', value: 'opt_lfm', emoji: '📢' },
-      { label: 'Bitrate', description: 'Change the channel bitrate', value: 'opt_bitrate', emoji: '📻' },
-      { label: 'Region', description: 'Change or reset the voice region', value: 'opt_region', emoji: '🌍' },
-      { label: 'Text', description: 'Create a temporary text channel', value: 'opt_text', emoji: '💬' },
-      { label: 'NSFW', description: 'Toggle NSFW for the voice and text channels', value: 'opt_nsfw', emoji: '🔞' },
-      { label: 'Claim', description: 'Claim ownership when the owner leaves', value: 'opt_claim', emoji: '👑' },
+      { label: 'Name', description: 'Change the channel name', value: 'opt_rename' },
+      { label: 'Limit', description: 'Change the channel user limit', value: 'opt_limit' },
+      { label: 'Status', description: 'Change the channel status or topic', value: 'opt_status' },
+      { label: 'Game', description: 'Rename the channel to your current game', value: 'opt_game' },
+      { label: 'LFM', description: 'Post a looking-for-members message', value: 'opt_lfm' },
+      { label: 'Bitrate', description: 'Adjust audio quality', value: 'opt_bitrate' },
+      { label: 'Region', description: 'Change the voice server region', value: 'opt_region' },
+      { label: 'Text', description: 'Create a temporary text chat', value: 'opt_text' },
+      { label: 'NSFW', description: 'Toggle NSFW restriction', value: 'opt_nsfw' },
+      { label: 'Claim', description: 'Claim ownership if owner leaves', value: 'opt_claim' },
     );
 
   const usersMenu = new StringSelectMenuBuilder()
     .setCustomId('menu_users')
     .setPlaceholder('Change access to your room')
     .addOptions(
-      { label: 'Lock', description: 'Lock the channel', value: 'opt_lock', emoji: '🔒' },
-      { label: 'Unlock', description: 'Unlock the channel', value: 'opt_unlock', emoji: '🔓' },
-      { label: 'Permit', description: 'Permit a user or role', value: 'opt_permit', emoji: '✅' },
-      { label: 'Reject', description: 'Reject or kick a user or role', value: 'opt_reject', emoji: '❌' },
-      { label: 'Invite', description: 'Create an invite for a user', value: 'opt_invite', emoji: '💌' },
-      { label: 'Ghost', description: 'Make the channel invisible', value: 'opt_hide', emoji: '👻' },
-      { label: 'Unghost', description: 'Make the channel visible', value: 'opt_unhide', emoji: '👁️' },
-      { label: 'Transfer', description: 'Transfer ownership to another user', value: 'opt_transfer', emoji: '🔄' },
+      { label: 'Lock', description: 'Lock the channel to everyone', value: 'opt_lock' },
+      { label: 'Unlock', description: 'Unlock the channel for everyone', value: 'opt_unlock' },
+      { label: 'Permit', description: 'Allow a user or role to join', value: 'opt_permit' },
+      { label: 'Reject', description: 'Kick and deny a user or role', value: 'opt_reject' },
+      { label: 'Invite', description: 'Generate an invite link', value: 'opt_invite' },
+      { label: 'Ghost', description: 'Hide the channel from the channel list', value: 'opt_hide' },
+      { label: 'Unghost', description: 'Make the channel visible again', value: 'opt_unhide' },
+      { label: 'Transfer', description: 'Transfer ownership to another user', value: 'opt_transfer' },
     );
 
   return [

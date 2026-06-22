@@ -127,18 +127,23 @@ export const buildControlPanelEmbed = (
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
-    .setDescription('Pick what you need and change it instantly\nthrough the dropdowns below.\n\n**Control Surface**')
+    .setDescription(
+      'Pick what you need and change it instantly through the dropdowns below.\n\n' +
+      '***\n\n' +
+      '**Control Surface**\n' +
+      'Customize your channel aesthetics, visibility, and user access.\n\n' +
+      '***\n\n' +
+      '**Personal Defaults**\n' +
+      'Use the buttons below to apply your saved layout or store your current setup.'
+    )
     .setThumbnail(
       validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
     )
-    .addFields({
-      name: 'Personal Defaults',
-      value: 'Use the buttons below or store your usual room setup\nwith `/defaults`',
-    })
     .setFooter({
-      text: `@${roomOwner?.user.username || member.user.username}'s Control Panel`,
+      text: 'SyncInk Control Panel',
+      iconURL: member.guild.client.user?.displayAvatarURL(),
     });
 
   if (validServerBanner) {
