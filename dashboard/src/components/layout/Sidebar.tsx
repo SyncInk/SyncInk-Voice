@@ -13,7 +13,7 @@ interface SidebarProps {
   onSelectGuild: (g: Guild) => void;
 }
 
-type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Member';
+export type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Member';
 
 const PERM_CONFIG: Record<PermLevel, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
   Owner:         { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: <Crown  size={10} />, label: 'Owner'         },
@@ -37,7 +37,7 @@ const PermBadge = ({ level }: { level: PermLevel }) => {
 };
 
 // Which nav items each role can access (true = visible, false = locked/hidden)
-const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
+export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Member: false },
   '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Member: false },
   '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: false, Member: false },
