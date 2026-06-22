@@ -16,6 +16,7 @@ import { getPanelButtons, getPanelDropdowns } from './components';
 
 const PANEL_FOOTER_PREFIX = 'SyncInk Panel';
 const ignoredPanelDeletes = new Set<string>();
+const panelLocks = new Set<string>();
 const OWNER_WARNING_DURATION_MS = 3 * 60 * 1000;
 const ownershipWarningTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -575,7 +576,13 @@ export const refreshRoomPanel = async (
     voiceChannel.guild.members.cache.get(tempChannel.ownerId)
     ?? (await voiceChannel.guild.members.fetch(tempChannel.ownerId).catch(() => null))
     ?? member;
-  let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
+  if (panelLocks.has(tempChannel.channelId)) {
+    return null;
+  }
+  panelLocks.add(tempChannel.channelId);
+
+  try {
+    let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
 
   if (!textChannel) {
     return null;
@@ -680,6 +687,9 @@ export const refreshRoomPanel = async (
   }
 
   return null;
+  } finally {
+    panelLocks.delete(tempChannel.channelId);
+  }
 };
 
 export const restoreRoomPanel = async (
