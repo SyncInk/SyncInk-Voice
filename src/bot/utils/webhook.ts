@@ -54,8 +54,13 @@ export async function sendWebhookMessage(
 ) {
   // Webhooks are currently bypassed as requested to fix silent API rejection errors
   // with custom avatars or missing webhook permissions on self-hosted instances.
-  return channel.send(content).catch((error) => {
+  return channel.send(content).catch(async (error) => {
     console.error(`[Webhook Utils] channel.send failed in channel ${channel.id}:`, error);
+    try {
+      await channel.send(`**CRITICAL ERROR SENDING EMBED:**\n\`\`\`json\n${JSON.stringify(error, Object.getOwnPropertyNames(error), 2).slice(0, 1900)}\n\`\`\``);
+    } catch (fallbackError) {
+      console.error(`[Webhook Utils] Fallback text send also failed:`, fallbackError);
+    }
     return null;
   });
 }
