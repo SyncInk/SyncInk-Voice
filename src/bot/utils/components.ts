@@ -11,6 +11,10 @@ export const getPanelButtons = () => {
       .setCustomId('btn_refresh_panel')
       .setLabel('Save To Defaults')
       .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setLabel('Dashboard')
+      .setURL(ENV.DASHBOARD_URL || 'https://discord.com')
+      .setStyle(ButtonStyle.Link),
   );
 
   return [row];

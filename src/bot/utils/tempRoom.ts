@@ -188,7 +188,7 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
     }
   }
 
-  return null;
+  return voiceChannel as unknown as TextChannel;
 };
 
 const buildOwnerLeftWarningEmbed = (roomName: string) =>
@@ -573,15 +573,6 @@ export const refreshRoomPanel = async (
     ?? (await voiceChannel.guild.members.fetch(tempChannel.ownerId).catch(() => null))
     ?? member;
   let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
-
-  if (!textChannel) {
-    textChannel = await ensureRoomTextChannel(
-      voiceChannel,
-      tempChannel,
-      'Temporary voice room chat',
-      getDisplayNameParts(panelOwner),
-    );
-  }
 
   if (!textChannel) {
     return null;
