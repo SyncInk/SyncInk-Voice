@@ -119,15 +119,17 @@ export const buildControlPanelEmbed = (
   voiceChannel?: VoiceChannel | null,
 ) => {
   const roomOwner = tempChannel ? member.guild.members.cache.get(tempChannel.ownerId) ?? null : null;
-  const panelTitle = voiceChannel?.name || 'Temporary Voice Control Panel';
-  const description = buildRoomInfoLines(tempChannel, voiceChannel).join('\n');
+  const isValidUrl = (url?: string | null) => url && (url.startsWith('http://') || url.startsWith('https://'));
+
+  const validServerAvatar = isValidUrl(settings?.serverAvatar) ? settings!.serverAvatar : null;
+  const validServerBanner = isValidUrl(settings?.serverBanner) ? settings!.serverBanner : null;
 
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
     .setDescription('Pick what you need and change it instantly\nthrough the dropdowns below.\n\n**Control Surface**')
     .setThumbnail(
-      settings?.serverAvatar ||
+      validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
     )
@@ -139,8 +141,8 @@ export const buildControlPanelEmbed = (
       text: `@${roomOwner?.user.username || member.user.username}'s Control Panel`,
     });
 
-  if (settings?.serverBanner) {
-    embed.setImage(settings.serverBanner);
+  if (validServerBanner) {
+    embed.setImage(validServerBanner);
   }
 
   return embed;
