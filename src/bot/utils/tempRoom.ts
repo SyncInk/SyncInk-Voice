@@ -128,7 +128,7 @@ export const buildControlPanelEmbed = (
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
     .setDescription(
-      `Hey <@${roomOwner?.id || member.id}>, pick what you need and change it instantly through the dropdowns below.\n\n` +
+      'Pick what you need and change it instantly through the dropdowns below.\n\n' +
       '***\n\n' +
       '**Control Surface**\n' +
       'Customize your channel aesthetics, visibility, and user access.\n\n' +
@@ -142,7 +142,7 @@ export const buildControlPanelEmbed = (
         member.user.displayAvatarURL({ size: 256 }),
     )
     .setFooter({
-      text: 'SyncInk Control Panel',
+      text: `@${roomOwner?.user.username || member.user.username}'s Control Panel`,
       iconURL: member.guild.client.user?.displayAvatarURL(),
     });
 
@@ -666,9 +666,18 @@ export const refreshRoomPanel = async (
   );
 
   if (sent instanceof Message) {
+    const isNewRoom = !tempChannel.panelMessageId;
     tempChannel.panelMessageId = sent.id;
     tempChannel.panelChannelId = textChannel.id;
     await tempChannel.save();
+
+    if (isNewRoom) {
+      const pingMsg = await textChannel.send(`<@${panelOwner.id}>`).catch(() => null);
+      if (pingMsg) {
+        await pingMsg.delete().catch(() => null);
+      }
+    }
+
     return sent;
   }
 
