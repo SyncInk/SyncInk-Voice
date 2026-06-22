@@ -134,17 +134,15 @@ export const buildControlPanelEmbed = (
       'Customize your channel aesthetics, visibility, and user access.\n\n' +
       '***\n\n' +
       '**Personal Defaults**\n' +
-      'Use the buttons below to apply your saved layout or store your current setup.'
+      'Use the buttons below to apply your saved layout or store your current setup.\n\n' +
+      '***\n\n' +
+      `<@${roomOwner?.id || member.id}>'s Control Panel`
     )
     .setThumbnail(
       validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
-    )
-    .setFooter({
-      text: `@${roomOwner?.user.username || member.user.username}'s Control Panel`,
-      iconURL: member.guild.client.user?.displayAvatarURL(),
-    });
+    );
 
   if (validServerBanner) {
     embed.setImage(validServerBanner);
