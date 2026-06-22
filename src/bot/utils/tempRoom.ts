@@ -60,6 +60,8 @@ export const formatRoomName = (template: string, member: GuildMember) => {
   return template
     .replaceAll('{user}', ownerName)
     .replaceAll('{name}', ownerName)
+    .replaceAll('{username}', member.user.username)
+    .replaceAll('{displayname}', member.displayName)
     .slice(0, 100);
 };
 
