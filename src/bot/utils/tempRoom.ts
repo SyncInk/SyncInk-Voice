@@ -128,7 +128,7 @@ export const buildControlPanelEmbed = (
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
     .setDescription(
-      'Pick what you need and change it instantly through the dropdowns below.\n\n' +
+      `Hey <@${roomOwner?.id || member.id}>, pick what you need and change it instantly through the dropdowns below.\n\n` +
       '***\n\n' +
       '**Control Surface**\n' +
       'Customize your channel aesthetics, visibility, and user access.\n\n' +
@@ -620,7 +620,6 @@ export const refreshRoomPanel = async (
 
   const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
-    content: `<@${panelOwner.id}>`,
     embeds: [panelEmbed],
     components: [...getPanelDropdowns(), ...getPanelButtons()],
     allowedMentions: { users: [panelOwner.id] },
