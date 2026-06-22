@@ -124,33 +124,19 @@ export const buildControlPanelEmbed = (
 
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
-    .setAuthor({
-      name: member.guild.name,
-      iconURL:
-        settings?.serverAvatar ||
-        member.guild.iconURL({ size: 256 }) ||
-        roomOwner?.displayAvatarURL({ size: 256 }) ||
-        member.user.displayAvatarURL({ size: 256 }),
-    })
-    .setTitle(panelTitle)
+    .setTitle('Your Custom Audio Space')
+    .setDescription('Pick what you need and change it instantly\nthrough the dropdowns below.\n\n**Control Surface**')
     .setThumbnail(
       settings?.serverAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
     )
-    .setDescription(description)
-    .addFields(
-      {
-        name: 'Room Management',
-        value: 'Rename, set the user limit, change bitrate, switch region, set game/activity, toggle NSFW, and manage the linked text chat.',
-      },
-      {
-        name: 'Permissions',
-        value: 'Lock, unlock, permit, reject, ghost, reveal, transfer ownership, kick users, and ban users.',
-      },
-    )
+    .addFields({
+      name: 'Personal Defaults',
+      value: 'Use the buttons below or store your usual room setup\nwith `/defaults`',
+    })
     .setFooter({
-      text: `${PANEL_FOOTER_PREFIX} | ${voiceChannel?.id || tempChannel?.channelId || 'unknown'}${dashboardUrl ? ` | ${dashboardUrl}` : ''}`,
+      text: `@${roomOwner?.user.username || member.user.username}'s Control Panel`,
     });
 
   if (settings?.serverBanner) {
@@ -636,9 +622,10 @@ export const refreshRoomPanel = async (
 
   const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
+    content: `<@${panelOwner.id}>`,
     embeds: [panelEmbed],
-    components: [...getPanelButtons(), ...getPanelDropdowns()],
-    allowedMentions: { parse: [] },
+    components: [...getPanelDropdowns(), ...getPanelButtons()],
+    allowedMentions: { users: [panelOwner.id] },
   };
 
   const existingPanel = tempChannel.panelMessageId

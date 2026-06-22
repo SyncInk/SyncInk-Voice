@@ -5,17 +5,12 @@ export const getPanelButtons = () => {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('btn_load_settings')
-      .setLabel('Load Settings')
-      .setEmoji('⚙️')
+      .setLabel('Apply Defaults')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('btn_refresh_panel')
-      .setLabel('Refresh Panel')
+      .setLabel('Save To Defaults')
       .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setLabel('Dashboard')
-      .setURL(ENV.DASHBOARD_URL || 'https://discord.com')
-      .setStyle(ButtonStyle.Link),
   );
 
   return [row];
@@ -24,7 +19,7 @@ export const getPanelButtons = () => {
 export const getPanelDropdowns = () => {
   const settingsMenu = new StringSelectMenuBuilder()
     .setCustomId('menu_settings')
-    .setPlaceholder('Room settings')
+    .setPlaceholder('Change the look of your room')
     .addOptions(
       { label: 'Name', description: 'Change the channel name', value: 'opt_rename', emoji: '📝' },
       { label: 'Limit', description: 'Change the channel user limit', value: 'opt_limit', emoji: '👥' },
@@ -40,7 +35,7 @@ export const getPanelDropdowns = () => {
 
   const usersMenu = new StringSelectMenuBuilder()
     .setCustomId('menu_users')
-    .setPlaceholder('Permissions and ownership')
+    .setPlaceholder('Change access to your room')
     .addOptions(
       { label: 'Lock', description: 'Lock the channel', value: 'opt_lock', emoji: '🔒' },
       { label: 'Unlock', description: 'Unlock the channel', value: 'opt_unlock', emoji: '🔓' },
