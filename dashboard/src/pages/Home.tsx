@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
-import { NAV_ACCESS, PermLevel } from '../components/layout/Sidebar';
+import { NAV_ACCESS, type PermLevel } from '../components/layout/Sidebar';
 
 const cards = [
   { to: '/setup', icon: '⚙️', title: 'Setup', desc: 'Configure your Discord server settings', bg: 'rgba(124,58,237,0.15)' },

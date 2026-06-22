@@ -67,7 +67,7 @@ const pv = {
   exit: { opacity: 0, y: -8 },
 };
 
-import { NAV_ACCESS, PermLevel } from './components/layout/Sidebar';
+import { NAV_ACCESS, type PermLevel } from './components/layout/Sidebar';
 
 function ProtectedRoute({ children, path, permLevel }: { children: React.ReactNode; path: string; permLevel: PermLevel }) {
   const allowed = NAV_ACCESS[path]?.[permLevel] ?? false;
