@@ -5,6 +5,7 @@ export interface IGuildSettings extends Document {
   setupChannelId: string | null;
   setupCategoryId: string | null;
   voiceControlChannelId: string | null;
+  lfmChannelId: string | null;
   defaultLimit: number;
   defaultName: string;
   serverNickname?: string;
@@ -21,6 +22,7 @@ const GuildSettingsSchema = new Schema<IGuildSettings>({
   setupChannelId: { type: String, default: null },
   setupCategoryId: { type: String, default: null },
   voiceControlChannelId: { type: String, default: null },
+  lfmChannelId: { type: String, default: null },
   defaultLimit: { type: Number, default: 0 },
   defaultName: { type: String, default: '{name}' },
   serverNickname: { type: String, default: '' },

@@ -951,6 +951,7 @@ export const startApi = (bot: SyncinkBot) => {
           setupChannelId: settings?.setupChannelId || '',
           setupCategoryId: settings?.setupCategoryId || '',
           voiceControlChannelId: settings?.voiceControlChannelId || '',
+          lfmChannelId: settings?.lfmChannelId || '',
           defaultName: settings?.defaultName || "{user}'s Room",
           defaultLimit: settings?.defaultLimit ?? 0,
         },
@@ -988,6 +989,11 @@ export const startApi = (bot: SyncinkBot) => {
         normalizeOptionalString(req.body.voiceControlChannelId, 50),
         [ChannelType.GuildText],
       );
+      const lfmChannelId = await validateGuildChannel(
+        guild,
+        normalizeOptionalString(req.body.lfmChannelId, 50),
+        [ChannelType.GuildText],
+      );
       const defaultName = normalizeOptionalString(req.body.defaultName, 80) || "{user}'s Room";
       const defaultLimit = normalizeLimit(req.body.defaultLimit, 0) ?? 0;
 
@@ -998,6 +1004,7 @@ export const startApi = (bot: SyncinkBot) => {
           setupCategoryId,
           setupChannelId,
           voiceControlChannelId,
+          lfmChannelId,
           defaultName,
           defaultLimit,
         },
@@ -1011,6 +1018,7 @@ export const startApi = (bot: SyncinkBot) => {
           setupChannelId: settings.setupChannelId || '',
           setupCategoryId: settings.setupCategoryId || '',
           voiceControlChannelId: settings.voiceControlChannelId || '',
+          lfmChannelId: settings.lfmChannelId || '',
           defaultName: settings.defaultName,
           defaultLimit: settings.defaultLimit,
         },
@@ -1216,6 +1224,7 @@ export const startApi = (bot: SyncinkBot) => {
       const loggingDoc = await GuildSettings.findOne({ guildId }).lean();
       return res.json({
         loggingChannelId: loggingDoc?.loggingChannelId || null,
+        lfmChannelId: loggingDoc?.lfmChannelId || null,
         loggingEvents: loggingDoc?.loggingEvents || {}
       });
     } catch (error) {
@@ -1240,12 +1249,12 @@ export const startApi = (bot: SyncinkBot) => {
         return res.status(403).json({ error: 'Administrator permissions required to edit Logging Configuration.' });
       }
 
-      const { loggingChannelId, loggingEvents } = req.body;
-      
-      console.log(`[API-DEBUG] Writing Logging Config to DB for guild ${guildId}: channel=${loggingChannelId}`);
+      const { loggingChannelId, loggingEvents, lfmChannelId } = req.body;
+
+      console.log(`[API-DEBUG] Writing Logging/LFM Config to DB for guild ${guildId}`);
       const updated = await GuildSettings.findOneAndUpdate(
         { guildId },
-        { $set: { loggingChannelId, loggingEvents } },
+        { $set: { loggingChannelId, loggingEvents, lfmChannelId } },
         { new: true, upsert: true }
       );
       if (!updated) throw new Error('Database save returned falsey');

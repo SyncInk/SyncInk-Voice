@@ -6,6 +6,7 @@ import {
   TextInputStyle,
   TextChannel,
   VoiceChannel,
+  ButtonBuilder,
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
@@ -36,6 +37,50 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
 
   if (!guild || !member) {
     return;
+  }
+
+  if (interaction.customId.startsWith('btn_lfm_join_vc_')) {
+    const vcId = interaction.customId.replace('btn_lfm_join_vc_', '');
+    const vc = guild.channels.cache.get(vcId) as VoiceChannel | undefined;
+    if (!vc) {
+      return interaction.reply({
+        embeds: [buildRoomEmbed('Voice channel missing', 'This voice channel no longer exists.')],
+        ephemeral: true,
+      });
+    }
+
+    if (vc.userLimit > 0 && vc.members.size >= vc.userLimit) {
+      return interaction.reply({
+        embeds: [buildRoomEmbed('Channel Full', 'This voice channel is currently full.')],
+        ephemeral: true,
+      });
+    }
+
+    // Grant access explicitly
+    await vc.permissionOverwrites.edit(interaction.user.id, {
+      ViewChannel: true,
+      Connect: true,
+    }).catch(() => null);
+
+    // Disable the button on the message
+    const msg = interaction.message;
+    if (msg && msg.components.length > 0) {
+      const row = msg.components[0] as any;
+      const disabledRow = new ActionRowBuilder<ButtonBuilder>();
+      row.components.forEach((c: any) => {
+        if (c.customId === interaction.customId) {
+          disabledRow.addComponents(ButtonBuilder.from(c as any).setDisabled(true).setLabel('Claimed'));
+        } else {
+          disabledRow.addComponents(ButtonBuilder.from(c as any));
+        }
+      });
+      await msg.edit({ components: [disabledRow] }).catch(() => null);
+    }
+
+    return interaction.reply({
+      content: `You have been granted access! Click here to join: <#${vc.id}>`,
+      ephemeral: true,
+    });
   }
 
   const tempChannel = await getTempChannelFromInteraction(interaction);

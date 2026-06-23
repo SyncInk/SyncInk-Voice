@@ -186,7 +186,7 @@ export const buildLookingForMembersEmbed = (
       name: member.displayName,
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
-    .setTitle('Looking for members')
+    .setTitle('<a:sync_alert:1518314359024124016> Looking for members')
     .setDescription(`**${channelName}** is looking for more members.`)
     .addFields(
       {
@@ -619,14 +619,13 @@ export const refreshRoomPanel = async (
   panelLocks.add(tempChannel.channelId);
 
   try {
-    let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
+    let textChannel = voiceChannel;
 
-    if (!textChannel) {
-      return null;
-    }
-
-    if (textChannel.id !== voiceChannel.id) {
-      await syncTextChannelAccess(textChannel as TextChannel, voiceChannel, tempChannel);
+    if (tempChannel.textChannelId) {
+      const privTextCh = voiceChannel.guild.channels.cache.get(tempChannel.textChannelId);
+      if (privTextCh?.isTextBased()) {
+        await syncTextChannelAccess(privTextCh as TextChannel, voiceChannel, tempChannel);
+      }
     }
 
   if (tempChannel.panelMessageId && tempChannel.panelChannelId && tempChannel.panelChannelId !== textChannel.id) {

@@ -8,6 +8,8 @@ import {
   TextInputStyle,
   TextChannel,
   VoiceChannel,
+  ButtonBuilder,
+  ButtonStyle,
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
@@ -238,37 +240,63 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_lfm': {
-      const roomText = tempChannel.textChannelId
-        ? guild.channels.cache.get(tempChannel.textChannelId) as TextChannel | undefined
-        : null;
-
-      if (!roomText) {
+      if (tempChannel.isLocked) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Create a text channel first', 'Use the Text option first, then post an LFM message in the room chat.')],
+          embeds: [buildRoomEmbed('Channel Locked', 'You cannot use the LFM feature while your voice channel is locked.')],
           ephemeral: true,
         });
       }
 
-      await sendWebhookMessage(
-        roomText,
-        { embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)] },
-        { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname },
-      );
+      const lfmChannelId = settings?.lfmChannelId;
+      if (!lfmChannelId) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('LFM Channel Not Configured', 'The LFM feature has not been configured. Ask your server administrator to set the LFM Channel in the dashboard.')],
+          ephemeral: true,
+        });
+      }
 
-      if (settings?.voiceControlChannelId) {
-        const controlChannel = guild.channels.cache.get(settings.voiceControlChannelId);
-        if (controlChannel?.isTextBased()) {
-          await sendWebhookMessage(
-            controlChannel as any,
-            { embeds: [buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit)] },
-            { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname },
-          ).catch(() => null);
-        }
+      const lfmChannel = guild.channels.cache.get(lfmChannelId);
+      if (!lfmChannel?.isTextBased()) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('LFM Channel Error', 'The configured LFM channel is invalid or missing. Ask your server administrator to update the settings.')],
+          ephemeral: true,
+        });
+      }
+
+      const joinBtn = new ButtonBuilder()
+        .setCustomId(`btn_lfm_join_vc_${tempChannel.channelId}`)
+        .setLabel('Join VC')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🔗');
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn);
+      const embed = buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit);
+
+      let msgId: string | null = null;
+
+      try {
+        const msg = await sendWebhookMessage(
+          lfmChannel as any,
+          { embeds: [embed], components: [row] },
+          { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname },
+        );
+        msgId = msg?.id || null;
+      } catch (err) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('Error', 'Failed to send LFM message. Please check bot permissions.')],
+          ephemeral: true,
+        });
+      }
+
+      if (msgId) {
+        tempChannel.lfmMessageId = msgId;
+        tempChannel.lfmChannelId = lfmChannelId;
+        await tempChannel.save().catch(() => null);
       }
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('LFM posted', `Posted a looking-for-members message in ${roomText}.`)],
+        embeds: [buildRoomEmbed('LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
         ephemeral: true,
       });
       return;

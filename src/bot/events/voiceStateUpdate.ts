@@ -1,4 +1,4 @@
-import { ChannelType, TextChannel, VoiceChannel, VoiceState } from 'discord.js';
+import { ChannelType, TextChannel, VoiceChannel, VoiceState, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { SyncinkBot } from '../bot';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { GuildSetup } from '../../database/models/GuildSetup';
@@ -156,6 +156,24 @@ export const handleVoiceStateUpdate = async (
 
         await refreshRoomPanel(voiceChannel, tempChannel, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       }
+
+      if (tempChannel.lfmMessageId && tempChannel.lfmChannelId && member.id !== tempChannel.ownerId) {
+        const lfmChannel = guild.channels.cache.get(tempChannel.lfmChannelId);
+        if (lfmChannel?.isTextBased()) {
+          const lfmMsg = await lfmChannel.messages.fetch(tempChannel.lfmMessageId).catch(() => null);
+          if (lfmMsg && lfmMsg.components.length > 0) {
+            const row = lfmMsg.components[0] as any;
+            const disabledRow = new ActionRowBuilder<ButtonBuilder>();
+            row.components.forEach((c: any) => {
+              disabledRow.addComponents(ButtonBuilder.from(c as any).setDisabled(true).setLabel('Claimed'));
+            });
+            await lfmMsg.edit({ components: [disabledRow] }).catch(() => null);
+          }
+        }
+        tempChannel.lfmMessageId = null;
+        tempChannel.lfmChannelId = null;
+        await tempChannel.save().catch(() => null);
+      }
     }
 
     if (oldState.channelId !== newState.channelId) {
@@ -218,6 +236,15 @@ export const handleVoiceStateUpdate = async (
       const owner = await getOwnerMember(guild, tempChannelData.ownerId, member);
       if (owner) {
         await refreshRoomPanel(oldChannel as VoiceChannel, tempChannelData, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      }
+
+      if (tempChannelData.textChannelId) {
+        const textChannel = guild.channels.cache.get(tempChannelData.textChannelId) as TextChannel | undefined;
+        if (textChannel?.isTextBased()) {
+          if (!tempChannelData.permittedUsers.includes(member.id) && tempChannelData.ownerId !== member.id) {
+            await textChannel.permissionOverwrites.delete(member.id).catch(() => null);
+          }
+        }
       }
     }
 

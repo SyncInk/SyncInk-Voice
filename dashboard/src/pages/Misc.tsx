@@ -26,6 +26,7 @@ const loggingLabels: Record<string, string> = {
 
 const initial = {
   loggingChannelId: '',
+  lfmChannelId: '',
   loggingEnabled: true,
   loggingEvents: Object.fromEntries(loggingEvents.map(e => [e, true])),
 };
@@ -51,7 +52,7 @@ export default function Misc({ guildId, addToast }: Props) {
 
     Promise.all([
       fetchJsonWithRetry<{ categories?: { id: string; name: string }[]; text?: { id: string; name: string; parentId: string | null }[] }>(`/api/guilds/${guildId}/channels`, { credentials: 'include' }),
-      fetchJsonWithRetry<{ loggingChannelId?: string | null; loggingEvents?: Record<string, boolean> }>(`/api/guilds/${guildId}/logging`, { credentials: 'include' })
+      fetchJsonWithRetry<{ loggingChannelId?: string | null; lfmChannelId?: string | null; loggingEvents?: Record<string, boolean> }>(`/api/guilds/${guildId}/logging`, { credentials: 'include' })
     ]).then(([channelsData, loggingData]) => {
       if (!channelsData.ok) throw new Error((channelsData.data as any)?.error || 'Failed to load channels');
       if (!loggingData.ok) throw new Error((loggingData.data as any)?.error || 'Failed to load logging settings');
@@ -61,6 +62,7 @@ export default function Misc({ guildId, addToast }: Props) {
       
       const loadedState = {
         loggingChannelId: loggingData.data?.loggingChannelId || '',
+        lfmChannelId: loggingData.data?.lfmChannelId || '',
         loggingEnabled: !!loggingData.data?.loggingChannelId,
         loggingEvents: { ...initial.loggingEvents, ...(loggingData.data?.loggingEvents || {}) },
       };
@@ -90,14 +92,15 @@ export default function Misc({ guildId, addToast }: Props) {
         credentials: 'include',
         body: JSON.stringify({
           loggingChannelId: state.loggingEnabled ? state.loggingChannelId : '',
+          lfmChannelId: state.lfmChannelId,
           loggingEvents: state.loggingEvents,
         }),
       });
-      if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save logging settings');
+      if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save settings');
       setSaved({ ...state, loggingChannelId: state.loggingEnabled ? state.loggingChannelId : '' });
-      addToast('success', 'Logging settings saved successfully!');
+      addToast('success', 'Settings saved successfully!');
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Failed to save logging settings.');
+      addToast('error', error instanceof Error ? error.message : 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
@@ -127,8 +130,8 @@ export default function Misc({ guildId, addToast }: Props) {
       <InfoBanner message="If you encounter any issues, please report them on our" />
       <div className="page-header" style={{ marginTop: 20 }}>
         <div>
-          <div className="page-title">Logging Settings</div>
-          <div className="page-subtitle">Configure which events are logged for this server</div>
+          <div className="page-title">Miscellaneous Settings</div>
+          <div className="page-subtitle">Configure logging, LFM, and other miscellaneous features for this server</div>
         </div>
         <button className="btn btn-secondary" onClick={() => setState(saved)}>
           <RotateCcw size={14} /> Reset to Defaults
@@ -166,6 +169,33 @@ export default function Misc({ guildId, addToast }: Props) {
                     ))}
                   </optgroup>
                 )}
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div className="section" style={{ borderBottom: 'none' }}>
+          <div className="section-header">
+            <div>
+              <div className="section-label">LFM Channel Setup</div>
+              <div className="section-desc">The channel where Looking For Members (LFM) messages will be posted</div>
+            </div>
+            <div className="select-wrapper" style={{ minWidth: 220 }}>
+              <select 
+                className="select-input" 
+                value={state.lfmChannelId} 
+                onChange={e => setState(s => ({ ...s, lfmChannelId: e.target.value }))}
+              >
+                <option value="">No LFM Channel Selected</option>
+                {categories.map(cat => {
+                  const children = textChannels.filter(c => c.parentId === cat.id);
+                  if (children.length === 0) return null;
+                  return (
+                    <optgroup key={cat.id} label={cat.name}>
+                      {children.map(c => <option key={c.id} value={c.id}># {c.name}</option>)}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
           </div>
