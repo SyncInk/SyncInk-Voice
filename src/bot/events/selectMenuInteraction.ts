@@ -296,7 +296,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('<a:sync_invite_people:1519004773297164358> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
+        embeds: [buildRoomEmbed('<:sync_invite_people:1519004773297164358> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
         ephemeral: true,
       });
       return;

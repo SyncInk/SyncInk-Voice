@@ -86,7 +86,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await targetMember.send({
         embeds: [
           buildRoomEmbed(
-            '<a:sync_invite_people:1519004773297164358> Voice room invite',
+            '<:sync_invite_people:1519004773297164358> Voice room invite',
             `<@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
           ),
         ],
@@ -94,7 +94,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:sync_invite_people:1519004773297164358> Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
+        embeds: [buildRoomEmbed('<:sync_invite_people:1519004773297164358> Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
         components: [],
       });
     }
