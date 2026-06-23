@@ -88,14 +88,22 @@ export const getRoomStatusLabel = (tempChannel: Pick<ITempChannel, 'isLocked' | 
 export const buildRoomEmbed = (title: string, description?: string) => {
   const embed = new EmbedBuilder().setColor(ENV.BRAND_COLOR).setTimestamp();
   
-  const hasCustomEmoji = /<a?:\w+:\d+>/.test(title);
-  if (hasCustomEmoji) {
-    embed.setDescription(`**${title}**${description ? `\n\n${description}` : ''}`);
+  const customEmojiMatch = title.match(/^(<a?:\w+:(\d+)>)\s*(.*)/);
+  if (customEmojiMatch) {
+    const emojiId = customEmojiMatch[2];
+    const cleanTitle = customEmojiMatch[3] || 'Notice';
+    const isAnimated = customEmojiMatch[1].startsWith('<a:');
+    
+    embed.setAuthor({
+      name: cleanTitle,
+      iconURL: `https://cdn.discordapp.com/emojis/${emojiId}.${isAnimated ? 'gif' : 'png'}`
+    });
   } else {
     embed.setTitle(title);
-    if (description) {
-      embed.setDescription(description);
-    }
+  }
+
+  if (description) {
+    embed.setDescription(description);
   }
 
   return embed;

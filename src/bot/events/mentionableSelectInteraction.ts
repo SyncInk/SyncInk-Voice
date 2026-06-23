@@ -86,8 +86,8 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await targetMember.send({
         embeds: [
           buildRoomEmbed(
-            'Voice room invite',
-            `<:sync_invite_people:1519004773297164358> <@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
+            '<:sync_invite_people:1519004773297164358> Voice room invite',
+            `<@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
           ),
         ],
       }).catch(() => null);
