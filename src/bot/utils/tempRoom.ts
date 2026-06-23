@@ -287,7 +287,10 @@ const buildOwnershipExpiredEmbed = (roomName: string) =>
 const buildOwnershipTransferredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x8b5cf6)
-    .setTitle('Ownership transferred')
+    .setAuthor({
+      name: 'Ownership transferred',
+      iconURL: 'https://cdn.discordapp.com/emojis/1518997998128988160.gif'
+    })
     .setDescription('Room ownership has been handed over successfully.')
     .addFields({
       name: 'Room',

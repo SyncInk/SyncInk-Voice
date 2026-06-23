@@ -137,6 +137,13 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         });
       }
 
+      if (targetId === tempChannel.ownerId) {
+        return interaction.editReply({
+          embeds: [buildRoomEmbed('<a:sync_alert:1513822294831534220> Already owner', 'You are already the owner of this room.')],
+          components: [],
+        });
+      }
+
       if (!targetMember || targetMember.voice.channelId !== channel.id) {
         return interaction.editReply({
           embeds: [buildRoomEmbed('User must be in the room', 'The new owner must already be connected to this voice channel.')],
@@ -150,10 +157,10 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.editReply({
-        embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         components: [],
       });
-      await channel.send({ embeds: [buildRoomEmbed('New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
+      await channel.send({ embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
     }
   } catch (error) {
     console.error('[MentionableSelect] Error:', error);

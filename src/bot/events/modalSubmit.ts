@@ -130,12 +130,19 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
         });
       }
 
+      if (targetId === tempChannel.ownerId) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('<a:sync_alert:1513822294831534220> Already owner', 'You are already the owner of this room.')],
+          ephemeral: true,
+        });
+      }
+
       tempChannel.ownerId = targetId;
       await tempChannel.save();
       await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         ephemeral: true,
       });
     }
