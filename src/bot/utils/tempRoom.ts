@@ -211,13 +211,13 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
     }
   }
 
-  return null;
+  return voiceChannel;
 };
 
 const buildOwnerLeftWarningEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle(':sync_alert~1: Owner Left Voice Channel')
+    .setTitle('⚠️ Owner Left Voice Channel')
     .setDescription(
       [
         'The current room owner has left the voice channel.',
@@ -230,7 +230,7 @@ const buildOwnerLeftWarningEmbed = (roomName: string) =>
       value: roomName,
       inline: true,
     })
-    .setFooter({ text: ':sync_alert: Ownership protection timer active.' })
+    .setFooter({ text: '⚠️ Ownership protection timer active.' })
     .setTimestamp();
 
 const buildOwnerReturnedEmbed = (roomName: string) =>
@@ -604,19 +604,12 @@ export const refreshRoomPanel = async (
     let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
 
     if (!textChannel) {
-      textChannel = await ensureRoomTextChannel(
-        voiceChannel,
-        tempChannel,
-        'Temporary voice room chat',
-        getDisplayNameParts(panelOwner),
-      );
-    }
-
-    if (!textChannel) {
       return null;
     }
 
-    await syncTextChannelAccess(textChannel, voiceChannel, tempChannel);
+    if (textChannel.id !== voiceChannel.id) {
+      await syncTextChannelAccess(textChannel as TextChannel, voiceChannel, tempChannel);
+    }
 
   if (tempChannel.panelMessageId && tempChannel.panelChannelId && tempChannel.panelChannelId !== textChannel.id) {
     const previousChannel = voiceChannel.guild.channels.cache.get(tempChannel.panelChannelId);
