@@ -155,7 +155,7 @@ const Input = ({ value, onChange, placeholder, maxLength }: { value: string; onC
 
 // ── Setup Card ────────────────────────────────────────────────────────────────
 const SetupCard = ({
-  setup, channels, categories, onEdit, onDelete, onDuplicate,
+  setup, channels, categories, canEdit, onEdit, onDelete, onDuplicate,
 }: {
   setup: GuildSetup;
   channels: DiscordChannel[];
