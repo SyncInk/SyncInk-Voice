@@ -172,14 +172,14 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       tempChannel.isLocked = true;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel locked', 'No new users can join.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<:sync_close_ticket:1513811041694519326> Channel locked', 'No new users can join.')], ephemeral: true });
 
     case 'btn_unlock':
       await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
       tempChannel.isLocked = false;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel unlocked', 'Users can freely join now.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<:syncunlocked:1519087149301891313> Channel unlocked', 'Users can freely join now.')], ephemeral: true });
 
     case 'btn_hide':
       await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });

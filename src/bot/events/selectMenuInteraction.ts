@@ -242,7 +242,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     case 'opt_lfm': {
       if (tempChannel.isLocked) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Channel Locked', 'You cannot use the LFM feature while your voice channel is locked.')],
+          embeds: [buildRoomEmbed('<:sync_close_ticket:1513811041694519326> Channel Locked', 'You cannot use the LFM feature while your voice channel is locked.')],
           ephemeral: true,
         });
       }
@@ -317,7 +317,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed(nextValue ? '🔞 NSFW enabled' : '🔞 NSFW disabled')],
+        embeds: [buildRoomEmbed(nextValue ? '<:syncnsfwids:1519065175867523223> NSFW enabled' : '<:syncsfwids:1519065346550796378> NSFW disabled')],
         ephemeral: true,
       });
       return;
@@ -328,7 +328,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = true;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('Channel locked', 'No new users can join.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('<:sync_close_ticket:1513811041694519326> Channel locked', 'No new users can join.')], ephemeral: true });
       return;
 
     case 'opt_unlock':
@@ -336,7 +336,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = false;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('Channel unlocked', 'Users can freely join.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('<:syncunlocked:1519087149301891313> Channel unlocked', 'Users can freely join.')], ephemeral: true });
       return;
 
     case 'opt_hide':

@@ -57,7 +57,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('Access permitted', `${mention} can now access the room.`)],
+        embeds: [buildRoomEmbed('<a:sync_approved_check_box:1519090351766507603> Access permitted', `${mention} can now access the room.`)],
         components: [],
       });
     }
@@ -124,7 +124,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('Access rejected', `${mention} can no longer access the room.`)],
+        embeds: [buildRoomEmbed('<a:sync_refused_box:1519090690200567859> Access rejected', `${mention} can no longer access the room.`)],
         components: [],
       });
     }
