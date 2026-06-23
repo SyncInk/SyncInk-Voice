@@ -78,7 +78,7 @@ const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionMenu);
   return interaction.reply({
-    embeds: [buildRoomEmbed('<:syncearthblurple:1519008181550842008> Select Voice Region', 'Choose a region for your voice channel. The panel will stay open.')],
+    embeds: [buildRoomEmbed('<a:syncearthblurple:1519008181550842008> Select Voice Region', 'Choose a region for your voice channel. The panel will stay open.')],
     components: [row],
     ephemeral: true,
   });
@@ -142,7 +142,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   if (value === 'opt_claim') {
     if (tempChannel.ownerId === interaction.user.id) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('<:sync_check_yes:1518997998128988160> Already owner', 'You are already the owner of this VC.')],
+        embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Already owner', 'You are already the owner of this VC.')],
         ephemeral: true,
       });
     }
@@ -296,7 +296,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('<:sync_invite_people:1519004773297164358> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
+        embeds: [buildRoomEmbed('<a:sync_invite_people:1519004773297164358> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
         ephemeral: true,
       });
       return;

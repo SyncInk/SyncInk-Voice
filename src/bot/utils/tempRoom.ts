@@ -257,7 +257,10 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
 const buildOwnerReturnedEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x57f287)
-    .setTitle('<:sync_check_yes:1518997998128988160> Ownership protection restored')
+    .setAuthor({
+      name: 'Ownership protection restored',
+      iconURL: 'https://cdn.discordapp.com/emojis/1518997998128988160.gif'
+    })
     .setDescription('The room owner returned in time, so ownership protection has been cancelled.')
     .addFields({
       name: 'Room',
@@ -269,7 +272,10 @@ const buildOwnerReturnedEmbed = (roomName: string) =>
 const buildOwnershipExpiredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xfee75c)
-    .setTitle('<a:syncink_voice_alert:1518903037257846874> Ownership transfer available')
+    .setAuthor({
+      name: 'Ownership transfer available',
+      iconURL: 'https://cdn.discordapp.com/emojis/1518903037257846874.gif'
+    })
     .setDescription('The 3-minute protection window expired. Ownership can now be transferred if needed.')
     .addFields({
       name: 'Room',
