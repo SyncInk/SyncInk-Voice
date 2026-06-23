@@ -254,7 +254,7 @@ const buildOwnerReturnedEmbed = (roomName: string) =>
 const buildOwnershipExpiredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xfee75c)
-    .setTitle('Ownership transfer available')
+    .setTitle('<a:syncink_voice_alert:1518903037257846874> Ownership transfer available')
     .setDescription('The 3-minute protection window expired. Ownership can now be transferred if needed.')
     .addFields({
       name: 'Room',
@@ -553,12 +553,10 @@ export const clearOwnershipWarning = async (
 ) => {
   clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
 
-  const voiceChannel = guild.channels.cache.get(tempChannel.channelId);
-  const textChannel = tempChannel.textChannelId
-    ? guild.channels.cache.get(tempChannel.textChannelId)
-    : null;
+  const voiceChannel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
+  const textChannel = voiceChannel ? await getPanelTargetChannel(voiceChannel, tempChannel) : null;
 
-  if (textChannel?.isTextBased() && tempChannel.ownerWarningMessageId) {
+  if (textChannel && tempChannel.ownerWarningMessageId) {
     const warningMessage = await textChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
     if (warningMessage) {
       const embed = reason === 'returned'
