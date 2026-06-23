@@ -73,6 +73,7 @@ const FEATURE_LIST: { key: string; label: string; icon: React.ElementType; desc:
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
   guildId: string | null;
+  permLevel?: string;
   addToast: (type: 'success' | 'error' | 'warning' | 'info', msg: string) => void;
 }
 
@@ -159,6 +160,7 @@ const SetupCard = ({
   setup: GuildSetup;
   channels: DiscordChannel[];
   categories: DiscordChannel[];
+  canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -208,27 +210,29 @@ const SetupCard = ({
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          {!setup.isLegacy && (
-            <button className="btn btn-secondary btn-sm" onClick={onDuplicate} title="Duplicate">
-              <Copy size={13} />
-            </button>
-          )}
-          {!setup.isLegacy ? (
-            <button className="btn btn-secondary btn-sm" onClick={onEdit}>
-              <Edit2 size={13} style={{ marginRight: 4 }} />Edit
-            </button>
-          ) : (
-            <span title="Created via /setup command — use /setup to modify" style={{ fontSize:12, color:'var(--text-muted)', padding:'6px 10px', borderRadius:8, border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:4 }}>
-              <Settings size={12} /> /setup
-            </span>
-          )}
-          {!setup.isLegacy && (
-            <button onClick={onDelete} style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center' }}>
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
+        {canEdit && (
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {!setup.isLegacy && (
+              <button className="btn btn-secondary btn-sm" onClick={onDuplicate} title="Duplicate">
+                <Copy size={13} />
+              </button>
+            )}
+            {!setup.isLegacy ? (
+              <button className="btn btn-secondary btn-sm" onClick={onEdit}>
+                <Edit2 size={13} style={{ marginRight: 4 }} />Edit
+              </button>
+            ) : (
+              <span title="Created via /setup command — use /setup to modify" style={{ fontSize:12, color:'var(--text-muted)', padding:'6px 10px', borderRadius:8, border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:4 }}>
+                <Settings size={12} /> /setup
+              </span>
+            )}
+            {!setup.isLegacy && (
+              <button onClick={onDelete} style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center' }}>
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 20, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
@@ -607,7 +611,7 @@ const DeleteModal = ({ name, onConfirm, onClose }: { name: string; onConfirm: ()
 );
 
 // ── Main Setup Page ────────────────────────────────────────────────────────────
-export default function Setup({ guildId, addToast }: Props) {
+export default function Setup({ guildId, permLevel, addToast }: Props) {
   const [setups, setSetups] = useState<GuildSetup[]>([]);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
   const [categories, setCategories] = useState<DiscordChannel[]>([]);
@@ -616,6 +620,8 @@ export default function Setup({ guildId, addToast }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<GuildSetup | null>(null);
   const [search, setSearch] = useState('');
   const [fetchError, setFetchError] = useState(false);
+
+  const canEdit = permLevel === 'Owner' || permLevel === 'Administrator';
 
   const loadData = useCallback(async () => {
     if (!guildId) return;
@@ -716,13 +722,17 @@ export default function Setup({ guildId, addToast }: Props) {
           <button className="btn btn-secondary btn-sm" onClick={loadData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <RefreshCw size={13} /> Refresh
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => setModal({ ...BLANK_SETUP, features: { ...BLANK_FEATURES } })}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <Plus size={15} /> Create Setup
-          </button>
+          {canEdit && (
+            <div>
+              <button
+                className="btn btn-primary"
+                onClick={() => setModal({ ...BLANK_SETUP, features: { ...BLANK_FEATURES } })}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Plus size={15} /> Create Setup
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -768,7 +778,7 @@ export default function Setup({ guildId, addToast }: Props) {
                 : 'Create your first Join-to-Create setup to get started. Users will join the generator channel to automatically create their own temporary voice channel.'}
             </div>
           </div>
-          {!search && (
+          {canEdit && !search && (
             <button
               className="btn btn-primary"
               onClick={() => setModal({ ...BLANK_SETUP, features: { ...BLANK_FEATURES } })}
@@ -786,6 +796,7 @@ export default function Setup({ guildId, addToast }: Props) {
               setup={s}
               channels={channels}
               categories={categories}
+              canEdit={canEdit}
               onEdit={() => setModal({ ...s })}
               onDelete={() => setDeleteTarget(s)}
               onDuplicate={() => handleDuplicate(s)}

@@ -53,15 +53,15 @@ const PermBadge = ({ level }: { level: PermLevel }) => {
 };
 
 const getRequirementLabel = (to: string) => {
-  if (to === '/setup' || to === '/role-toggles' || to === '/access' || to === '/bot-profile') {
+  if (to === '/access' || to === '/bot-profile' || to === '/misc') {
     return 'Owner / Administrator';
   }
 
-  if (to === '/server-toggles' || to === '/misc') {
+  if (to === '/server-toggles') {
     return 'Moderator / Above';
   }
 
-  if (to === '/interface') {
+  if (to === '/setup' || to === '/role-toggles' || to === '/interface') {
     return 'Staff / Above';
   }
 
@@ -70,11 +70,11 @@ const getRequirementLabel = (to: string) => {
 
 // Which nav items each role can access (true = visible, false = locked/hidden)
 export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
-  '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/setup':          { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
   '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
-  '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
   '/access':         { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
-  '/misc':           { Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
+  '/misc':           { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
   '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
   '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
   '/global-profile': { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },

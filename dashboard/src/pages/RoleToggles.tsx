@@ -9,6 +9,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface Props {
   guildId: string | null;
+  permLevel?: string;
   addToast: (type: 'success'|'error'|'warning'|'info', msg: string) => void;
 }
 
@@ -41,7 +42,7 @@ const TOGGLE_FEATURES = [
 
 const defaultToggles = () => Object.fromEntries(TOGGLE_FEATURES.map(f => [f.key, 'inherit' as ToggleState])) as Record<string, ToggleState>;
 
-export default function RoleToggles({ guildId, addToast }: Props) {
+export default function RoleToggles({ guildId, permLevel, addToast }: Props) {
   const [allRoles, setAllRoles] = useState<DiscordRole[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Record<string, ToggleState>>>(new Map());
   const [savedProfiles, setSavedProfiles] = useState<Map<string, Record<string, ToggleState>>>(new Map());
@@ -51,6 +52,8 @@ export default function RoleToggles({ guildId, addToast }: Props) {
   const [showAdd, setShowAdd] = useState(false);
 
   const [fetchError, setFetchError] = useState(false);
+
+  const canEdit = permLevel === 'Owner' || permLevel === 'Administrator';
 
   const loadData = () => {
     if (!guildId) return;
@@ -194,11 +197,17 @@ export default function RoleToggles({ guildId, addToast }: Props) {
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
         {/* Left Panel */}
         <div className="card" style={{ width: 240, flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Role Profiles</div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAdd(s => !s)} style={{ padding: '4px 10px' }}>
-              <Plus size={13} />
-            </button>
+          <div style={{ padding: '0 10px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profiles</div>
+            {canEdit && (
+              <button
+                onClick={() => setShowAdd(!showAdd)}
+                style={{ background: showAdd ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                title="Add Profile"
+              >
+                <Plus size={13} />
+              </button>
+            )}
           </div>
 
           {showAdd && addableRoles.length > 0 && (
@@ -248,9 +257,11 @@ export default function RoleToggles({ guildId, addToast }: Props) {
                     })()}
                   </div>
                 </span>
-                <button onClick={e => { e.stopPropagation(); removeRole(roleId); }} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:2, display:'flex', borderRadius:4 }}>
-                  <X size={13} />
-                </button>
+                {canEdit && (
+                  <button onClick={e => { e.stopPropagation(); removeRole(roleId); }} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:2, display:'flex', borderRadius:4 }}>
+                    <X size={13} />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -278,7 +289,7 @@ export default function RoleToggles({ guildId, addToast }: Props) {
                       <div className="section-label">{f.label}</div>
                       <div className="section-desc">{f.desc}</div>
                     </div>
-                    <ThreeToggle value={selectedToggles![f.key]} onChange={v => setToggle(f.key, v)} />
+                    <ThreeToggle disabled={!canEdit} value={selectedToggles![f.key]} onChange={v => setToggle(f.key, v)} />
                   </div>
                 </div>
               ))}
@@ -286,7 +297,7 @@ export default function RoleToggles({ guildId, addToast }: Props) {
           )}
         </div>
       </div>
-      <UnsavedBar visible={hasChanges} onSave={handleSave} onReset={() => setProfiles(new Map(savedProfiles))} saving={saving} />
+      {canEdit && <UnsavedBar visible={hasChanges} onSave={handleSave} onReset={() => setProfiles(new Map(savedProfiles))} saving={saving} />}
     </div>
   );
 }
