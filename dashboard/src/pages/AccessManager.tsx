@@ -19,12 +19,13 @@ interface AccessManagerProps {
 
 export type AccessLevel = 'low' | 'medium' | 'high' | 'critical';
 
-const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string; iconUrl: string }> = {
+const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string; iconUrl: string; gradientText?: string }> = {
   critical: {
     label: 'Owner',
     description: 'Manage server settings, toggles, and most dashboard sections.',
     tone: '#f472b6',
-    iconUrl: 'https://cdn.discordapp.com/emojis/1513803214674464788.webp?size=40'
+    iconUrl: 'https://cdn.discordapp.com/emojis/1513803214674464788.webp?size=40',
+    gradientText: 'linear-gradient(90deg, #8b5cf6 0%, #f472b6 50%, #fb923c 100%)'
   },
   high: {
     label: 'Administrator',
@@ -219,7 +220,19 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: ACCESS_LEVEL_META[level].tone, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <img src={ACCESS_LEVEL_META[level].iconUrl} style={{ width: 18, height: 18, objectFit: 'contain' }} alt="" />
-                  {ACCESS_LEVEL_META[level].label}
+                  {ACCESS_LEVEL_META[level].gradientText ? (
+                    <span style={{
+                      background: ACCESS_LEVEL_META[level].gradientText,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      color: 'transparent'
+                    }}>
+                      {ACCESS_LEVEL_META[level].label}
+                    </span>
+                  ) : (
+                    ACCESS_LEVEL_META[level].label
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{ACCESS_LEVEL_META[level].description}</div>
               </div>
