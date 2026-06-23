@@ -603,11 +603,20 @@ export const refreshRoomPanel = async (
   try {
     let textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
 
-  if (!textChannel) {
-    return null;
-  }
+    if (!textChannel) {
+      textChannel = await ensureRoomTextChannel(
+        voiceChannel,
+        tempChannel,
+        'Temporary voice room chat',
+        getDisplayNameParts(panelOwner),
+      );
+    }
 
-  await syncTextChannelAccess(textChannel, voiceChannel, tempChannel);
+    if (!textChannel) {
+      return null;
+    }
+
+    await syncTextChannelAccess(textChannel, voiceChannel, tempChannel);
 
   if (tempChannel.panelMessageId && tempChannel.panelChannelId && tempChannel.panelChannelId !== textChannel.id) {
     const previousChannel = voiceChannel.guild.channels.cache.get(tempChannel.panelChannelId);
