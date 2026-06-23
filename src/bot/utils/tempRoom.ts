@@ -86,9 +86,16 @@ export const getRoomStatusLabel = (tempChannel: Pick<ITempChannel, 'isLocked' | 
 };
 
 export const buildRoomEmbed = (title: string, description?: string) => {
-  const embed = new EmbedBuilder().setColor(ENV.BRAND_COLOR).setTitle(title).setTimestamp();
-  if (description) {
-    embed.setDescription(description);
+  const embed = new EmbedBuilder().setColor(ENV.BRAND_COLOR).setTimestamp();
+  
+  const hasCustomEmoji = /<a?:\w+:\d+>/.test(title);
+  if (hasCustomEmoji) {
+    embed.setDescription(`**${title}**${description ? `\n\n${description}` : ''}`);
+  } else {
+    embed.setTitle(title);
+    if (description) {
+      embed.setDescription(description);
+    }
   }
 
   return embed;

@@ -268,7 +268,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
 
       if (tempChannel.ownerId === interaction.user.id) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Already owner', 'You are already the owner of this VC.')],
+          embeds: [buildRoomEmbed('<:sync_check_yes:1518997998128988160> Already owner', 'You are already the owner of this VC.')],
           ephemeral: true,
         });
       }
