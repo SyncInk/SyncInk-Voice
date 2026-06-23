@@ -242,7 +242,7 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
 const buildOwnerReturnedEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x57f287)
-    .setTitle('Ownership protection restored')
+    .setTitle('<:sync_check_yes:1518997998128988160> Ownership protection restored')
     .setDescription('The room owner returned in time, so ownership protection has been cancelled.')
     .addFields({
       name: 'Room',

@@ -22,9 +22,11 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     return;
   }
 
+  await interaction.deferUpdate().catch(() => null);
+
   const tempChannel = await getTempChannelFromInteraction(interaction);
   if (!tempChannel || tempChannel.ownerId !== interaction.user.id) {
-    return interaction.reply({
+    return interaction.followUp({
       embeds: [buildRoomEmbed('Owner only', 'Only the current room owner can use these controls.')],
       ephemeral: true,
     });
@@ -32,7 +34,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
   const channel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!channel) {
-    return interaction.reply({
+    return interaction.followUp({
       embeds: [buildRoomEmbed('Voice channel missing') ],
       ephemeral: true,
     });
@@ -54,7 +56,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await channel.permissionOverwrites.edit(targetId, { Connect: true, ViewChannel: true });
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.update({
+      return interaction.editReply({
         embeds: [buildRoomEmbed('Access permitted', `${mention} can now access the room.`)],
         components: [],
       });
@@ -62,7 +64,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
     if (interaction.customId === 'mentionable_opt_invite') {
       if (isRole || !targetMember) {
-        return interaction.update({
+        return interaction.editReply({
           embeds: [buildRoomEmbed('Select a user', 'Invites can only be sent to users, not roles.')],
           components: [],
         });
@@ -85,13 +87,13 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         embeds: [
           buildRoomEmbed(
             'Voice room invite',
-            `<@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
+            `<:sync_invite_people:1519004773297164358> <@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
           ),
         ],
       }).catch(() => null);
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.update({
+      return interaction.editReply({
         embeds: [buildRoomEmbed('Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
         components: [],
       });
@@ -121,7 +123,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       }
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.update({
+      return interaction.editReply({
         embeds: [buildRoomEmbed('Access rejected', `${mention} can no longer access the room.`)],
         components: [],
       });
@@ -129,14 +131,14 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
     if (interaction.customId === 'mentionable_opt_transfer') {
       if (isRole) {
-        return interaction.update({
+        return interaction.editReply({
           embeds: [buildRoomEmbed('Select a user', 'Ownership cannot be transferred to a role.')],
           components: [],
         });
       }
 
       if (!targetMember || targetMember.voice.channelId !== channel.id) {
-        return interaction.update({
+        return interaction.editReply({
           embeds: [buildRoomEmbed('User must be in the room', 'The new owner must already be connected to this voice channel.')],
           components: [],
         });
@@ -147,7 +149,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.update({
+      await interaction.editReply({
         embeds: [buildRoomEmbed('Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         components: [],
       });
