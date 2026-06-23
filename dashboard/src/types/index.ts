@@ -14,7 +14,7 @@ export interface Guild {
   icon: string | null;
   owner: boolean;
   permissions: string;
-  permissionLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Member';
+  permissionLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
   botPresent: boolean;
 }
 

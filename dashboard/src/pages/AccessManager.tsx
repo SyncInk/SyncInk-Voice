@@ -13,7 +13,7 @@ interface Role {
 
 interface AccessManagerProps {
   guildId: string | null;
-  permissionLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Member';
+  permissionLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
   addToast: (type: 'success' | 'error' | 'warning' | 'info', msg: string) => void;
 }
 
@@ -36,9 +36,9 @@ const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: strin
     tone: '#8b5cf6',
   },
   low: {
-    label: 'View Only',
-    description: 'Can view the dashboard without edit access.',
-    tone: '#94a3b8',
+    label: 'Staff',
+    description: 'Access low-level dashboard settings such as Interface.',
+    tone: '#3b82f6',
   },
 };
 

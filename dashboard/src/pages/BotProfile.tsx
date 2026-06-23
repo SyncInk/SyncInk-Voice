@@ -4,7 +4,7 @@ import { InfoBanner } from '../components/layout/InfoBanner';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
 import { fetchJsonWithRetry } from '../api';
 
-type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Member';
+type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
 
 interface BotProfileProps {
   guildId: string | null;
@@ -17,6 +17,7 @@ const CAN_EDIT: Record<PermLevel, { nickname: boolean; bio: boolean; avatar: boo
   Owner:         { nickname: true,  bio: true,  avatar: true  },
   Administrator: { nickname: true,  bio: true,  avatar: false },
   Moderator:     { nickname: false, bio: false, avatar: false },
+  Staff:         { nickname: false, bio: false, avatar: false },
   Member:        { nickname: false, bio: false, avatar: false },
 };
 

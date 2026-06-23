@@ -198,14 +198,15 @@ const userHasManageGuild = (guild: DiscordGuild) => {
   }
 };
 
-const ACCESS_LEVEL_ORDER: Record<'Member' | 'Moderator' | 'Administrator' | 'Owner', number> = {
+const ACCESS_LEVEL_ORDER: Record<'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner', number> = {
   Member: 0,
-  Moderator: 1,
-  Administrator: 2,
-  Owner: 3,
+  Staff: 1,
+  Moderator: 2,
+  Administrator: 3,
+  Owner: 4,
 };
 
-const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | 'Moderator' | 'Administrator' | 'Owner' => {
+const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' => {
   switch (level) {
     case 'critical':
       return 'Owner';
@@ -214,6 +215,7 @@ const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | '
     case 'medium':
       return 'Moderator';
     case 'low':
+      return 'Staff';
     default:
       return 'Member';
   }
@@ -222,8 +224,8 @@ const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | '
 const getGuildPermissionLevel = (
   guild: DiscordGuild,
   memberPermissions?: bigint | null,
-  accessLevel?: 'Member' | 'Moderator' | 'Administrator' | 'Owner',
-): 'Owner' | 'Administrator' | 'Moderator' | 'Member' => {
+  accessLevel?: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner',
+): 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' => {
   if (guild.owner) return 'Owner';
 
   const rawPermissions = guild.permissions_new || guild.permissions;
@@ -359,45 +361,36 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
     const botGuild = bot.guilds.cache.get(guild.id);
     if (!botGuild) continue;
 
-    let hasAccess = false;
-    let permLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Member' = 'Member';
     const member = await botGuild.members.fetch(sessionUser.id).catch(() => null);
-    const memberPermissions = member?.permissions?.bitfield ?? null;
+    if (!member) continue;
+
+    const memberPermissions = member.permissions?.bitfield ?? null;
     const accessDoc = accessDocs.find(d => d.guildId === guild.id);
-    let matchedAccessLevel: 'Member' | 'Moderator' | 'Administrator' | 'Owner' | null = null;
+    let matchedAccessLevel: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | null = null;
+    let permLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' = 'Member';
 
     if (userHasManageGuild(guild)) {
-      hasAccess = true;
       permLevel = getGuildPermissionLevel(guild, memberPermissions, 'Administrator');
-    } else {
-      if (accessDoc && accessDoc.allowedRoles.length > 0) {
-        try {
-          if (member) {
-            const matchingRoles = accessDoc.allowedRoles.filter(ar => member.roles.cache.has(ar.roleId));
-            if (matchingRoles.length > 0) {
-              hasAccess = true;
-              matchedAccessLevel = matchingRoles.reduce((highest, role) => {
-                const mapped = mapDashboardAccessLevel(role.level);
-                return ACCESS_LEVEL_ORDER[mapped] > ACCESS_LEVEL_ORDER[highest] ? mapped : highest;
-              }, 'Member' as 'Member' | 'Moderator' | 'Administrator' | 'Owner');
-            }
-          }
-        } catch {}
+    } else if (accessDoc && accessDoc.allowedRoles.length > 0) {
+      const matchingRoles = accessDoc.allowedRoles.filter(ar => member.roles.cache.has(ar.roleId));
+      if (matchingRoles.length > 0) {
+        matchedAccessLevel = matchingRoles.reduce((highest, role) => {
+          const mapped = mapDashboardAccessLevel(role.level);
+          return ACCESS_LEVEL_ORDER[mapped] > ACCESS_LEVEL_ORDER[highest] ? mapped : highest;
+        }, 'Member' as 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner');
+        permLevel = getGuildPermissionLevel(guild, memberPermissions, matchedAccessLevel);
       }
     }
 
-    if (hasAccess) {
-      permLevel = getGuildPermissionLevel(guild, memberPermissions, matchedAccessLevel || undefined);
-      manageable.push({
-        id: guild.id,
-        name: guild.name,
-        iconUrl: guild.icon
-          ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
-          : null,
-        botConnected: true,
-        permissionLevel: permLevel,
-      });
-    }
+    manageable.push({
+      id: guild.id,
+      name: guild.name,
+      iconUrl: guild.icon
+        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
+        : null,
+      botConnected: true,
+      permissionLevel: permLevel,
+    });
   }
 
   return manageable.sort((a, b) => a.name.localeCompare(b.name));

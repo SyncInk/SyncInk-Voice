@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, Wrench, User, Globe,
   Monitor, BookOpen, ChevronDown, RefreshCw, Mic2,
-  Crown, Lock, Plus
+  Lock, Plus
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -13,12 +13,15 @@ interface SidebarProps {
   onSelectGuild: (g: Guild) => void;
 }
 
-export type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Member';
+export type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
+
+const IconImg = ({ src }: { src: string }) => <img src={src} style={{ width: 12, height: 12, objectFit: 'contain' }} alt="" />;
 
 const PERM_CONFIG: Record<PermLevel, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-  Owner:         { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: <Crown  size={10} />, label: 'Owner'         },
-  Administrator: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    icon: <Shield size={10} />, label: 'Administrator' },
-  Moderator:     { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',    icon: <Shield size={10} />, label: 'Moderator'     },
+  Owner:         { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: <IconImg src="https://cdn.discordapp.com/emojis/1517253606686986323.webp?size=40" />, label: 'Owner'         },
+  Administrator: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924309668823160.webp?size=40" />, label: 'Administrator' },
+  Moderator:     { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40" />, label: 'Moderator'     },
+  Staff:         { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',   icon: <IconImg src="https://cdn.discordapp.com/emojis/1513328514529624185.webp?size=40" />, label: 'Staff'         },
   Member:        { color: '#6b7280', bg: 'rgba(107,114,128,0.12)',  icon: <User   size={10} />, label: 'Member'        },
 };
 
@@ -45,21 +48,25 @@ const getRequirementLabel = (to: string) => {
     return 'Moderator / Above';
   }
 
+  if (to === '/interface') {
+    return 'Staff / Above';
+  }
+
   return 'Available to all';
 };
 
 // Which nav items each role can access (true = visible, false = locked/hidden)
 export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
-  '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Member: false },
-  '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Member: false },
-  '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: false, Member: false },
-  '/access':         { Owner: true,  Administrator: true,  Moderator: false, Member: false },
-  '/misc':           { Owner: true,  Administrator: true,  Moderator: true,  Member: false },
-  '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Member: false },
-  '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
-  '/global-profile': { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
-  '/invite':         { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
-  '/guide':          { Owner: true,  Administrator: true,  Moderator: true,  Member: true  },
+  '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
+  '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/access':         { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/misc':           { Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
+  '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
+  '/global-profile': { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/invite':         { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/guide':          { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
 };
 
 const NavItem = ({
