@@ -217,7 +217,7 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
 const buildOwnerLeftWarningEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle('⚠️ Owner Left Voice Channel')
+    .setTitle('<a:sync_alert:1513822294831534220> Owner Left Voice Channel')
     .setDescription(
       [
         'The current room owner has left the voice channel.',
@@ -230,7 +230,7 @@ const buildOwnerLeftWarningEmbed = (roomName: string) =>
       value: roomName,
       inline: true,
     })
-    .setFooter({ text: '⚠️ Ownership protection timer active.' })
+    .setFooter({ text: 'Ownership protection timer active.', iconURL: 'https://cdn.discordapp.com/emojis/1513822294831534220.webp?size=40&animated=true' })
     .setTimestamp();
 
 const buildOwnerReturnedEmbed = (roomName: string) =>
@@ -646,6 +646,7 @@ export const refreshRoomPanel = async (
 
   const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
+    content: `<@${panelOwner.id}>`,
     embeds: [panelEmbed],
     components: [...getPanelDropdowns(), ...getPanelButtons()],
     allowedMentions: { users: [panelOwner.id] },
