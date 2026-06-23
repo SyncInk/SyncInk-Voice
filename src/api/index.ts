@@ -198,15 +198,48 @@ const userHasManageGuild = (guild: DiscordGuild) => {
   }
 };
 
-const getPermissionLevel = (guild: DiscordGuild): 'Owner' | 'Administrator' | 'Moderator' | 'Member' => {
+const ACCESS_LEVEL_ORDER: Record<'Member' | 'Moderator' | 'Administrator' | 'Owner', number> = {
+  Member: 0,
+  Moderator: 1,
+  Administrator: 2,
+  Owner: 3,
+};
+
+const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | 'Moderator' | 'Administrator' | 'Owner' => {
+  switch (level) {
+    case 'critical':
+      return 'Owner';
+    case 'high':
+      return 'Administrator';
+    case 'medium':
+      return 'Moderator';
+    case 'low':
+    default:
+      return 'Member';
+  }
+};
+
+const getGuildPermissionLevel = (
+  guild: DiscordGuild,
+  memberPermissions?: bigint | null,
+  accessLevel?: 'Member' | 'Moderator' | 'Administrator' | 'Owner',
+): 'Owner' | 'Administrator' | 'Moderator' | 'Member' => {
   if (guild.owner) return 'Owner';
+
   const rawPermissions = guild.permissions_new || guild.permissions;
-  if (!rawPermissions) return 'Member';
-  try {
-    const bits = BigInt(rawPermissions);
-    if ((bits & ADMIN_MASK) === ADMIN_MASK) return 'Administrator';
-    if ((bits & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'Moderator';
-  } catch { /* ignore */ }
+  const hasAdmin = rawPermissions ? (() => {
+    try {
+      const bits = BigInt(rawPermissions);
+      return (bits & ADMIN_MASK) === ADMIN_MASK;
+    } catch {
+      return false;
+    }
+  })() : false;
+
+  if (hasAdmin) return 'Administrator';
+  if (memberPermissions && (memberPermissions & ADMIN_MASK) === ADMIN_MASK) return 'Administrator';
+  if (memberPermissions && (memberPermissions & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'Moderator';
+  if (accessLevel) return accessLevel;
   return 'Member';
 };
 
@@ -327,19 +360,26 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
     if (!botGuild) continue;
 
     let hasAccess = false;
-    let permLevel = getPermissionLevel(guild);
+    let permLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Member' = 'Member';
+    const member = await botGuild.members.fetch(sessionUser.id).catch(() => null);
+    const memberPermissions = member?.permissions?.bitfield ?? null;
+    const accessDoc = accessDocs.find(d => d.guildId === guild.id);
+    let matchedAccessLevel: 'Member' | 'Moderator' | 'Administrator' | 'Owner' | null = null;
 
     if (userHasManageGuild(guild)) {
       hasAccess = true;
+      permLevel = getGuildPermissionLevel(guild, memberPermissions, 'Administrator');
     } else {
-      const accessDoc = accessDocs.find(d => d.guildId === guild.id);
       if (accessDoc && accessDoc.allowedRoles.length > 0) {
         try {
-          const member = await botGuild.members.fetch(sessionUser.id).catch(() => null);
           if (member) {
-            const hasRole = accessDoc.allowedRoles.some(ar => member.roles.cache.has(ar.roleId));
-            if (hasRole) {
+            const matchingRoles = accessDoc.allowedRoles.filter(ar => member.roles.cache.has(ar.roleId));
+            if (matchingRoles.length > 0) {
               hasAccess = true;
+              matchedAccessLevel = matchingRoles.reduce((highest, role) => {
+                const mapped = mapDashboardAccessLevel(role.level);
+                return ACCESS_LEVEL_ORDER[mapped] > ACCESS_LEVEL_ORDER[highest] ? mapped : highest;
+              }, 'Member' as 'Member' | 'Moderator' | 'Administrator' | 'Owner');
             }
           }
         } catch {}
@@ -347,6 +387,7 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
     }
 
     if (hasAccess) {
+      permLevel = getGuildPermissionLevel(guild, memberPermissions, matchedAccessLevel || undefined);
       manageable.push({
         id: guild.id,
         name: guild.name,
@@ -1019,19 +1060,35 @@ export const startApi = (bot: SyncinkBot) => {
       
       const roles = guild.roles.cache
         .filter(r => r.id !== guild.id)
-        .map(r => ({ id: r.id, name: r.name, color: r.hexColor, position: r.position, isOrphaned: false }))
+        .map(r => ({
+          id: r.id,
+          name: r.name,
+          color: r.hexColor,
+          position: r.position,
+          permissions: r.permissions.bitfield.toString(),
+          isOrphaned: false,
+        }))
         .sort((a, b) => b.position - a.position);
-        
+      
       // include @everyone at the bottom
       const everyone = guild.roles.cache.get(guild.id);
-      if (everyone) roles.push({ id: everyone.id, name: everyone.name, color: everyone.hexColor, position: -1, isOrphaned: false });
+      if (everyone) {
+        roles.push({
+          id: everyone.id,
+          name: everyone.name,
+          color: everyone.hexColor,
+          position: -1,
+          permissions: everyone.permissions.bitfield.toString(),
+          isOrphaned: false,
+        });
+      }
 
       // Fetch saved roles to detect orphans
       const settings = await GuildSettings.findOne({ guildId }).lean();
       if (settings?.roleToggles) {
         for (const roleId of Object.keys(settings.roleToggles)) {
           if (!guild.roles.cache.has(roleId)) {
-            roles.push({ id: roleId, name: 'Orphaned Role (Missing)', color: '#808080', position: -2, isOrphaned: true });
+            roles.push({ id: roleId, name: 'Orphaned Role (Missing)', color: '#808080', position: -2, permissions: '0', isOrphaned: true });
           }
         }
       }

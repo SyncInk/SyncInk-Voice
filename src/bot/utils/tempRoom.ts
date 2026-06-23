@@ -126,20 +126,37 @@ export const buildControlPanelEmbed = (
 
   const validServerAvatar = isValidUrl(settings?.serverAvatar) ? settings!.serverAvatar : null;
   const validServerBanner = isValidUrl(settings?.serverBanner) ? settings!.serverBanner : null;
+  const currentMembers = voiceChannel?.members.size ?? 0;
+  const currentLimit = voiceChannel?.userLimit ?? tempChannel?.userLimit ?? 0;
+  const statusText = tempChannel ? getRoomStatusLabel(tempChannel) : 'Public';
+  const accessText = tempChannel?.isNsfw ? 'NSFW enabled' : 'NSFW disabled';
 
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
     .setDescription(
-      'Pick what you need and change it instantly through the dropdowns below.\n\n' +
-      '***\n\n' +
-      '**Control Surface**\n' +
-      'Customize your channel aesthetics, visibility, and user access.\n\n' +
-      '***\n\n' +
-      '**Personal Defaults**\n' +
-      'Use the buttons below to apply your saved layout or store your current setup.\n\n' +
-      '***\n\n' +
-      `<@${roomOwner?.id || member.id}>'s Control Panel`
+      [
+        'Pick what you need and change it instantly through the menus below.',
+        '',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '',
+        '**Room Overview**',
+        `Owner: <@${roomOwner?.id || member.id}>`,
+        `Members: **${currentMembers}${currentLimit ? ` / ${currentLimit}` : ''}**`,
+        `Status: **${statusText}**`,
+        accessText,
+        '',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '',
+        '**Controls**',
+        'Use the first menu for room settings, and the second menu for permissions and access.',
+        'This panel stays synced with the dashboard, so changes show up everywhere.',
+        '',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '',
+        '**Quick Setup**',
+        'Use `/setup` once in each server to set the join-to-create channel, then manage everything here.',
+      ].join('\n'),
     )
     .setThumbnail(
       validServerAvatar ||
@@ -194,7 +211,7 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
     }
   }
 
-  return voiceChannel as unknown as TextChannel;
+  return null;
 };
 
 const buildOwnerLeftWarningEmbed = (roomName: string) =>

@@ -36,6 +36,18 @@ const PermBadge = ({ level }: { level: PermLevel }) => {
   );
 };
 
+const getRequirementLabel = (to: string) => {
+  if (to === '/setup' || to === '/role-toggles' || to === '/access' || to === '/bot-profile') {
+    return 'Owner / Administrator';
+  }
+
+  if (to === '/server-toggles' || to === '/misc') {
+    return 'Moderator / Above';
+  }
+
+  return 'Available to all';
+};
+
 // Which nav items each role can access (true = visible, false = locked/hidden)
 export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/setup':          { Owner: true,  Administrator: true,  Moderator: false, Member: false },
@@ -58,17 +70,22 @@ const NavItem = ({
   if (!allowed) {
     return (
       <div
-        title={`Requires ${to === '/setup' || to === '/role-toggles' ? 'Administrator' : 'Moderator'} or higher`}
+        title={`Requires ${getRequirementLabel(to)}`}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 12px', borderRadius: 8, margin: '1px 0',
-          color: 'var(--text-muted)', opacity: 0.45, cursor: 'not-allowed',
+          padding: '10px 12px', borderRadius: 12, margin: '1px 0',
+          color: 'var(--text-muted)', opacity: 0.72, cursor: 'not-allowed',
           fontSize: 13, userSelect: 'none',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+          border: '1px solid rgba(255,255,255,0.04)',
         }}
       >
-        <span style={{ opacity: 0.6 }}>{icon}</span>
-        <span>{label}</span>
-        <Lock size={11} style={{ marginLeft: 'auto', opacity: 0.6 }} />
+        <span style={{ opacity: 0.62 }}>{icon}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+          <span style={{ fontWeight: 600 }}>{label}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{getRequirementLabel(to)}</span>
+        </div>
+        <Lock size={11} style={{ marginLeft: 'auto', opacity: 0.75 }} />
       </div>
     );
   }

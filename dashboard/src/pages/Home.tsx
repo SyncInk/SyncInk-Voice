@@ -27,6 +27,9 @@ export default function Home({ guildName, permLevel }: { guildName: string; perm
         <p className="page-subtitle" style={{ fontSize: 14 }}>
           Select a section to configure your Syncink Voice settings for <strong style={{ color: 'var(--text-primary)' }}>{guildName}</strong>
         </p>
+        <p className="page-subtitle" style={{ fontSize: 12, marginTop: 8, color: 'var(--text-muted)' }}>
+          Locked pages stay visible, so members, moderators, administrators, and owners can all see what is available at their tier.
+        </p>
       </div>
       <motion.div className="home-cards-grid" variants={container} initial="initial" animate="animate">
         {cards.map(c => {

@@ -7,6 +7,8 @@ interface Role {
   id: string;
   name: string;
   color: string;
+  position: number;
+  permissions?: string;
 }
 
 interface AccessManagerProps {
@@ -16,6 +18,55 @@ interface AccessManagerProps {
 }
 
 export type AccessLevel = 'low' | 'medium' | 'high' | 'critical';
+
+const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string }> = {
+  critical: {
+    label: 'Owner',
+    description: 'Full control over the dashboard and every server setting.',
+    tone: '#ef4444',
+  },
+  high: {
+    label: 'Administrator',
+    description: 'Manage server settings, toggles, and most dashboard sections.',
+    tone: '#f59e0b',
+  },
+  medium: {
+    label: 'Moderator',
+    description: 'Manage voice room tools and approved moderation pages.',
+    tone: '#8b5cf6',
+  },
+  low: {
+    label: 'View Only',
+    description: 'Can view the dashboard without edit access.',
+    tone: '#94a3b8',
+  },
+};
+
+const ADMIN_MASK = 1n << 3n;
+const MANAGE_GUILD_MASK = 1n << 5n;
+
+const safePermissions = (value?: string) => {
+  if (!value) return 0n;
+  try {
+    return BigInt(value);
+  } catch {
+    return 0n;
+  }
+};
+
+const getSuggestedLevel = (role: Role, allRoles: Role[]) => {
+  const name = role.name.toLowerCase();
+  const perms = safePermissions(role.permissions);
+  if (name.includes('owner')) return 'critical' as const;
+  if (name.includes('admin') || (perms & ADMIN_MASK) === ADMIN_MASK) return 'critical' as const;
+  if (name.includes('mod') || name.includes('manager') || (perms & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'high' as const;
+
+  const index = allRoles.findIndex(r => r.id === role.id);
+  const ratio = index >= 0 ? index / Math.max(allRoles.length, 1) : 1;
+  if (ratio < 0.25) return 'high' as const;
+  if (ratio < 0.55) return 'medium' as const;
+  return 'low' as const;
+};
 
 export interface IAccessRole {
   roleId: string;
@@ -78,8 +129,9 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
     }
   };
 
-  const addRole = (roleId: string) => {
-    setAllowedRoles(prev => [...prev, { roleId, level: 'low' }]);
+  const addRole = (role: Role) => {
+    const suggested = getSuggestedLevel(role, allRoles);
+    setAllowedRoles(prev => [...prev, { roleId: role.id, level: suggested }]);
     setShowAdd(false);
   };
 
@@ -134,19 +186,42 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
   }
 
   const addableRoles = allRoles.filter(r => !allowedRoles.some(ar => ar.roleId === r.id));
+  const levelCounts = {
+    critical: allowedRoles.filter(r => r.level === 'critical').length,
+    high: allowedRoles.filter(r => r.level === 'high').length,
+    medium: allowedRoles.filter(r => r.level === 'medium').length,
+    low: allowedRoles.filter(r => r.level === 'low').length,
+  };
 
   return (
     <div className="page-content">
-      <InfoBanner message="Owners and Administrators always have full Critical access to the dashboard." />
+      <InfoBanner message="Owner, Administrator, and Moderator access is tiered automatically. Higher tiers always outrank lower tiers." />
       
       <div className="page-header" style={{ marginTop: 20 }}>
         <div>
           <div className="page-title">Dashboard Access Manager</div>
-          <div className="page-subtitle">Select which Discord roles are allowed to access and edit dashboard settings.</div>
+          <div className="page-subtitle">Select which Discord roles can open the dashboard and assign them the right access tier.</div>
         </div>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
         </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 18 }}>
+        {(['critical', 'high', 'medium'] as AccessLevel[]).map((level) => (
+          <div key={level} className="card" style={{ padding: 16, borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Access Tier</div>
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: ACCESS_LEVEL_META[level].tone }}>{ACCESS_LEVEL_META[level].label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{ACCESS_LEVEL_META[level].description}</div>
+              </div>
+              <div style={{ minWidth: 44, height: 44, borderRadius: 12, background: `${ACCESS_LEVEL_META[level].tone}22`, border: `1px solid ${ACCESS_LEVEL_META[level].tone}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: ACCESS_LEVEL_META[level].tone }}>
+                {levelCounts[level]}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="card">
@@ -163,9 +238,12 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
         {showAdd && addableRoles.length > 0 && (
           <div style={{ marginBottom: 20, padding: 12, background: 'var(--bg-card-hover)', borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
             {addableRoles.map(r => (
-              <div key={r.id} onClick={() => addRole(r.id)} style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div key={r.id} onClick={() => addRole(r)} style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 8 }}>
                 <span style={{ width: 12, height: 12, borderRadius: '50%', background: r.color === '#000000' ? '#99aab5' : r.color }} />
-                <span>{r.name}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span>{r.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ACCESS_LEVEL_META[getSuggestedLevel(r, allRoles)].label} by default</span>
+                </div>
               </div>
             ))}
           </div>
@@ -185,19 +263,24 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
                 <div key={ar.roleId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ width: 14, height: 14, borderRadius: '50%', background: role.color === '#000000' ? '#99aab5' : role.color }} />
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>{role.name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{role.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {ACCESS_LEVEL_META[ar.level].label} tier
+                      </span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <select 
                       className="form-control" 
-                      style={{ width: 140, padding: '6px 12px', fontSize: 13 }}
+                      style={{ width: 190, padding: '6px 12px', fontSize: 13 }}
                       value={ar.level}
                       onChange={(e) => changeLevel(ar.roleId, e.target.value as AccessLevel)}
                     >
-                      <option value="low">Low (View Only)</option>
-                      <option value="medium">Medium (Manage VC)</option>
-                      <option value="high">High (Manage Roles)</option>
-                      <option value="critical">Critical (Full Access)</option>
+                      <option value="critical">Owner (Full Access)</option>
+                      <option value="high">Administrator (Manage Server)</option>
+                      <option value="medium">Moderator (Manage VC)</option>
+                      <option value="low">View Only</option>
                     </select>
                     <button onClick={() => removeRole(ar.roleId)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 4 }}>
                       <X size={16} />
