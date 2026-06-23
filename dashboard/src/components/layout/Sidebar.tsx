@@ -18,10 +18,10 @@ export type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Mem
 const IconImg = ({ src }: { src: string }) => <img src={src} style={{ width: 12, height: 12, objectFit: 'contain' }} alt="" />;
 
 const PERM_CONFIG: Record<PermLevel, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-  Owner:         { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: <IconImg src="https://cdn.discordapp.com/emojis/1517253606686986323.webp?size=40" />, label: 'Owner'         },
+  Owner:         { color: '#c084fc', bg: 'rgba(192,132,252,0.12)',  icon: <IconImg src="https://cdn.discordapp.com/emojis/1517253606686986323.webp?size=40" />, label: 'Owner'         },
   Administrator: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924309668823160.webp?size=40" />, label: 'Administrator' },
-  Moderator:     { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40" />, label: 'Moderator'     },
-  Staff:         { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',   icon: <IconImg src="https://cdn.discordapp.com/emojis/1513328514529624185.webp?size=40" />, label: 'Staff'         },
+  Moderator:     { color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40" />, label: 'Moderator'     },
+  Staff:         { color: '#64748b', bg: 'rgba(100,116,139,0.12)',  icon: <IconImg src="https://cdn.discordapp.com/emojis/1513328514529624185.webp?size=40" />, label: 'Staff'         },
   Member:        { color: '#6b7280', bg: 'rgba(107,114,128,0.12)',  icon: <User   size={10} />, label: 'Member'        },
 };
 

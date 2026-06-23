@@ -23,7 +23,7 @@ const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: strin
   critical: {
     label: 'Owner',
     description: 'Manage server settings, toggles, and most dashboard sections.',
-    tone: '#f59e0b',
+    tone: '#c084fc',
     iconUrl: 'https://cdn.discordapp.com/emojis/1517253606686986323.webp?size=40'
   },
   high: {
@@ -35,13 +35,13 @@ const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: strin
   medium: {
     label: 'Moderator',
     description: 'Manage voice room tools and approved moderation pages.',
-    tone: '#8b5cf6',
+    tone: '#06b6d4',
     iconUrl: 'https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40'
   },
   low: {
     label: 'Staff',
     description: 'Access low-level dashboard settings such as Interface.',
-    tone: '#3b82f6',
+    tone: '#64748b',
     iconUrl: 'https://cdn.discordapp.com/emojis/1513328514529624185.webp?size=40'
   },
 };
