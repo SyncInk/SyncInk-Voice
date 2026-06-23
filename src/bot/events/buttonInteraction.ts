@@ -11,6 +11,7 @@ import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
 import {
   buildRoomEmbed,
+  clearOwnershipWarning,
   formatRoomName,
   markPanelDeletionIgnored,
   refreshRoomPanel,
@@ -209,6 +210,49 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       }
 
       await voiceChannel.delete().catch(() => null);
+      return;
+    }
+
+    case 'btn_claim_room': {
+      if (tempChannel.ownerId === interaction.user.id) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('Already owner', 'You are already the owner of this VC.')],
+          ephemeral: true,
+        });
+      }
+
+      if (voiceChannel.members.has(tempChannel.ownerId)) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('Owner is still here', 'You can only claim this room after the current owner leaves.')],
+          ephemeral: true,
+        });
+      }
+
+      const warningExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() || 0;
+      if (warningExpiresAt && warningExpiresAt > Date.now()) {
+        const remainingSeconds = Math.ceil((warningExpiresAt - Date.now()) / 1000);
+        return interaction.reply({
+          embeds: [
+            buildRoomEmbed(
+              'Ownership protection active',
+              `Please wait **${remainingSeconds} seconds** before claiming this room.`,
+            ),
+          ],
+          ephemeral: true,
+        });
+      }
+
+      if (warningExpiresAt && warningExpiresAt <= Date.now()) {
+        await clearOwnershipWarning(guild, tempChannel, 'transferred');
+      }
+
+      tempChannel.ownerId = interaction.user.id;
+      await tempChannel.save();
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+      await interaction.reply({
+        embeds: [buildRoomEmbed('Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+        ephemeral: true,
+      });
       return;
     }
 

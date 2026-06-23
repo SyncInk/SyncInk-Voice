@@ -7,6 +7,9 @@ import {
   PermissionFlagsBits,
   TextChannel,
   VoiceChannel,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } from 'discord.js';
 import { TempChannel, ITempChannel } from '../../database/models/TempChannel';
 import { GuildSettings, IGuildSettings } from '../../database/models/GuildSettings';
@@ -214,15 +217,17 @@ const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: IT
   return voiceChannel;
 };
 
-const buildOwnerLeftWarningEmbed = (roomName: string) =>
-  new EmbedBuilder()
+const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
+  const timestamp = Math.floor(expiresAt.getTime() / 1000);
+  return new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle('<a:sync_alert:1513822294831534220> Owner Left Voice Channel')
+    .setTitle('<a:sync_alert~1:1518314359024124016> Owner Left Voice Channel')
     .setDescription(
       [
         'The current room owner has left the voice channel.',
         '',
-        'They have 3 minutes to rejoin before ownership becomes available for transfer.',
+        `Ownership protection will expire **<t:${timestamp}:R>** (<t:${timestamp}:f>).`,
+        'After that time, anyone can claim the room using the button below.',
       ].join('\n'),
     )
     .addFields({
@@ -230,8 +235,9 @@ const buildOwnerLeftWarningEmbed = (roomName: string) =>
       value: roomName,
       inline: true,
     })
-    .setFooter({ text: 'Ownership protection timer active.', iconURL: 'https://cdn.discordapp.com/emojis/1513822294831534220.webp?size=40&animated=true' })
+    .setFooter({ text: 'Ownership protection timer active.', iconURL: 'https://cdn.discordapp.com/emojis/1518314359024124016.webp?size=40&animated=true' })
     .setTimestamp();
+};
 
 const buildOwnerReturnedEmbed = (roomName: string) =>
   new EmbedBuilder()
@@ -369,17 +375,24 @@ const sendOwnershipWarningMessage = async (
   member: GuildMember,
   settings?: IGuildSettings | null,
 ) => {
-  const textChannel = await ensureRoomTextChannel(
-    voiceChannel,
-    tempChannel,
-    'Temporary voice room chat',
-    getDisplayNameParts(member),
-  );
+  const textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
 
-  const warningEmbed = buildOwnerLeftWarningEmbed(voiceChannel.name);
+  if (!textChannel) return null;
+
+  const warningEmbed = buildOwnerLeftWarningEmbed(voiceChannel.name, tempChannel.ownerWarningExpiresAt!);
+  
+  const claimButton = new ButtonBuilder()
+    .setCustomId('btn_claim_room')
+    .setLabel('Claim Room')
+    .setEmoji({ name: 'syncinkvoiceclaimtransfer', id: '1517253606686986323' })
+    .setStyle(ButtonStyle.Success)
+    .setDisabled(true);
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claimButton);
+
   const sent = await sendWebhookMessage(
     textChannel,
-    { embeds: [warningEmbed] },
+    { embeds: [warningEmbed], components: [row] },
     {
       serverAvatar: settings?.serverAvatar || null,
       serverNickname: settings?.serverNickname || null,
@@ -453,19 +466,28 @@ const expireOwnershipWarning = async (guild: Guild, channelId: string, dashboard
     'Temporary voice room chat',
   ).catch(() => null);
 
+  const claimButton = new ButtonBuilder()
+    .setCustomId('btn_claim_room')
+    .setLabel('Claim Room')
+    .setEmoji({ name: 'syncinkvoiceclaimtransfer', id: '1517253606686986323' })
+    .setStyle(ButtonStyle.Success)
+    .setDisabled(false);
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claimButton);
+
   if (roomTextChannel && tempChannel.ownerWarningMessageId) {
     const warningMessage = await roomTextChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
     if (warningMessage) {
       await warningMessage.edit({
         embeds: [buildOwnershipExpiredEmbed(voiceChannel.name)],
-        components: [],
+        components: [row as any],
         allowedMentions: { parse: [] },
       }).catch(() => null);
     }
   } else if (roomTextChannel) {
     await sendWebhookMessage(
       roomTextChannel,
-      { embeds: [buildOwnershipExpiredEmbed(voiceChannel.name)] },
+      { embeds: [buildOwnershipExpiredEmbed(voiceChannel.name)], components: [row as any] },
       {
         defaultName: guild.client.user?.username,
       },
