@@ -493,8 +493,6 @@ const expireOwnershipWarning = async (guild: Guild, channelId: string, dashboard
       },
     ).catch(() => null);
   }
-
-  tempChannel.ownerWarningMessageId = null;
   tempChannel.ownerWarningExpiresAt = null;
   await tempChannel.save().catch(() => null);
 };
