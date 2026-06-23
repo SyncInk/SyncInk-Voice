@@ -55,7 +55,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
   }
 
   const ownerOnly = tempChannel.ownerId === interaction.user.id;
-  if (!ownerOnly && interaction.customId !== 'btn_refresh_panel') {
+  if (!ownerOnly && interaction.customId !== 'btn_refresh_panel' && interaction.customId !== 'btn_claim_room') {
     return interaction.reply({
       embeds: [buildRoomEmbed('Owner only', 'Only the current room owner can use these controls.')],
       ephemeral: true,
@@ -214,6 +214,13 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_claim_room': {
+      if (!voiceChannel.members.has(interaction.user.id)) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('Not in Voice Channel', 'You must be inside the voice channel to use this button.')],
+          ephemeral: true,
+        });
+      }
+
       if (tempChannel.ownerId === interaction.user.id) {
         return interaction.reply({
           embeds: [buildRoomEmbed('Already owner', 'You are already the owner of this VC.')],

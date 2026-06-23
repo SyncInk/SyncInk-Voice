@@ -221,12 +221,12 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
   const timestamp = Math.floor(expiresAt.getTime() / 1000);
   return new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle('<a:sync_alert~1:1518314359024124016> Owner Left Voice Channel')
+    .setTitle('<a:sync_alert:1513822294831534220> Owner Left Voice Channel')
     .setDescription(
       [
         'The current room owner has left the voice channel.',
         '',
-        `Ownership protection will expire **<t:${timestamp}:R>** (<t:${timestamp}:f>).`,
+        `Ownership protection will expire **<t:${timestamp}:R>**.`,
         'After that time, anyone can claim the room using the button below.',
       ].join('\n'),
     )
