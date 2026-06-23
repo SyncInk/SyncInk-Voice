@@ -233,7 +233,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       const textCh = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', getDisplayNameParts(member));
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('Text chat ready', `Linked text chat: ${textCh}`)],
+        embeds: [buildRoomEmbed('<:sync_text_message:1519040787533271121> Text chat ready', `Linked text chat: ${textCh}`)],
         ephemeral: true,
       });
       return;
