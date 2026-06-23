@@ -19,26 +19,30 @@ interface AccessManagerProps {
 
 export type AccessLevel = 'low' | 'medium' | 'high' | 'critical';
 
-const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string }> = {
+const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string; iconUrl: string }> = {
   critical: {
     label: 'Owner',
-    description: 'Full control over the dashboard and every server setting.',
-    tone: '#ef4444',
+    description: 'Manage server settings, toggles, and most dashboard sections.',
+    tone: '#f59e0b',
+    iconUrl: 'https://cdn.discordapp.com/emojis/1517253606686986323.webp?size=40'
   },
   high: {
     label: 'Administrator',
     description: 'Manage server settings, toggles, and most dashboard sections.',
-    tone: '#f59e0b',
+    tone: '#ef4444',
+    iconUrl: 'https://cdn.discordapp.com/emojis/1518924309668823160.webp?size=40'
   },
   medium: {
     label: 'Moderator',
     description: 'Manage voice room tools and approved moderation pages.',
     tone: '#8b5cf6',
+    iconUrl: 'https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40'
   },
   low: {
     label: 'Staff',
     description: 'Access low-level dashboard settings such as Interface.',
     tone: '#3b82f6',
+    iconUrl: 'https://cdn.discordapp.com/emojis/1513328514529624185.webp?size=40'
   },
 };
 
@@ -207,13 +211,16 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 18 }}>
-        {(['critical', 'high', 'medium'] as AccessLevel[]).map((level) => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 18 }}>
+        {(['critical', 'high', 'medium', 'low'] as AccessLevel[]).map((level) => (
           <div key={level} className="card" style={{ padding: 16, borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Access Tier</div>
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: ACCESS_LEVEL_META[level].tone }}>{ACCESS_LEVEL_META[level].label}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: ACCESS_LEVEL_META[level].tone, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <img src={ACCESS_LEVEL_META[level].iconUrl} style={{ width: 18, height: 18, objectFit: 'contain' }} alt="" />
+                  {ACCESS_LEVEL_META[level].label}
+                </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{ACCESS_LEVEL_META[level].description}</div>
               </div>
               <div style={{ minWidth: 44, height: 44, borderRadius: 12, background: `${ACCESS_LEVEL_META[level].tone}22`, border: `1px solid ${ACCESS_LEVEL_META[level].tone}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: ACCESS_LEVEL_META[level].tone }}>
@@ -280,7 +287,7 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
                       <option value="critical">Owner (Full Access)</option>
                       <option value="high">Administrator (Manage Server)</option>
                       <option value="medium">Moderator (Manage VC)</option>
-                      <option value="low">View Only</option>
+                      <option value="low">Staff (Limited UI)</option>
                     </select>
                     <button onClick={() => removeRole(ar.roleId)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 4 }}>
                       <X size={16} />

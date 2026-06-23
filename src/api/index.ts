@@ -228,6 +228,8 @@ const getGuildPermissionLevel = (
 ): 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' => {
   if (guild.owner) return 'Owner';
 
+  if (accessLevel) return accessLevel;
+
   const rawPermissions = guild.permissions_new || guild.permissions;
   const hasAdmin = rawPermissions ? (() => {
     try {
@@ -241,7 +243,7 @@ const getGuildPermissionLevel = (
   if (hasAdmin) return 'Administrator';
   if (memberPermissions && (memberPermissions & ADMIN_MASK) === ADMIN_MASK) return 'Administrator';
   if (memberPermissions && (memberPermissions & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'Moderator';
-  if (accessLevel) return accessLevel;
+  
   return 'Member';
 };
 
@@ -370,8 +372,10 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
     let permLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' = 'Member';
 
     if (userHasManageGuild(guild)) {
-      permLevel = getGuildPermissionLevel(guild, memberPermissions, 'Administrator');
-    } else if (accessDoc && accessDoc.allowedRoles.length > 0) {
+      permLevel = getGuildPermissionLevel(guild, memberPermissions);
+    }
+
+    if (accessDoc && accessDoc.allowedRoles.length > 0) {
       const matchingRoles = accessDoc.allowedRoles.filter(ar => member.roles.cache.has(ar.roleId));
       if (matchingRoles.length > 0) {
         matchedAccessLevel = matchingRoles.reduce((highest, role) => {
