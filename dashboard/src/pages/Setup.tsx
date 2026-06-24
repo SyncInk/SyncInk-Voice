@@ -226,11 +226,9 @@ const SetupCard = ({
                 <Settings size={12} /> /setup
               </span>
             )}
-            {!setup.isLegacy && (
-              <button onClick={onDelete} style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center' }}>
-                <Trash2 size={13} />
-              </button>
-            )}
+            <button onClick={onDelete} style={{ background: 'var(--error-light)', color: 'var(--error)', border: '1px solid var(--error)', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center' }} title="Delete Setup">
+              <Trash2 size={13} />
+            </button>
           </div>
         )}
       </div>
