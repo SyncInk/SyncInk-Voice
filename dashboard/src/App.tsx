@@ -50,7 +50,7 @@ const API = {
         icon: g.iconUrl ? g.iconUrl.match(/icons\/\d+\/([^.?]+)/)?.[1] ?? null : null,
         owner: g.permissionLevel === 'Owner',
         permissions: '0',
-        permissionLevel: (g.permissionLevel as 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member') ?? 'Member',
+        permissionLevel: (g.permissionLevel as 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member') ?? 'Member',
         botPresent: g.botConnected,
       }));
     } catch { return []; }

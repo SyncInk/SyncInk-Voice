@@ -1,6 +1,6 @@
 import { Schema, model, Document } from 'mongoose';
 
-export type AccessLevel = 'low' | 'medium' | 'high' | 'critical';
+export type AccessLevel = 'low' | 'medium' | 'high' | 'critical' | 'developer';
 
 export interface IAccessRole {
   roleId: string;
@@ -14,7 +14,7 @@ export interface IDashboardAccess extends Document {
 
 const AccessRoleSchema = new Schema<IAccessRole>({
   roleId: { type: String, required: true },
-  level: { type: String, enum: ['low', 'medium', 'high', 'critical'], required: true },
+  level: { type: String, enum: ['low', 'medium', 'high', 'critical', 'developer'], required: true },
 }, { _id: false });
 
 const DashboardAccessSchema = new Schema<IDashboardAccess>({

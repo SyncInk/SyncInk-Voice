@@ -4,7 +4,7 @@ import { InfoBanner } from '../components/layout/InfoBanner';
 import { UnsavedBar } from '../components/ui/UnsavedBar';
 import { fetchJsonWithRetry } from '../api';
 
-type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
+type PermLevel = 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
 
 interface BotProfileProps {
   guildId: string | null;
@@ -14,6 +14,7 @@ interface BotProfileProps {
 
 // What each role can edit
 const CAN_EDIT: Record<PermLevel, { nickname: boolean; bio: boolean; avatar: boolean }> = {
+  Developer:     { nickname: true,  bio: true,  avatar: true  },
   Owner:         { nickname: true,  bio: true,  avatar: true  },
   Administrator: { nickname: true,  bio: true,  avatar: false },
   Moderator:     { nickname: false, bio: false, avatar: false },
@@ -230,7 +231,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
           </div>
         </div>
         <div style={{ fontSize:12, color:'var(--text-muted)', background:'var(--bg-elevated)', padding:'6px 12px', borderRadius:20, display:'flex', alignItems:'center', gap:6 }}>
-          <User size={12} /> Editing as: <strong style={{ color: permissionLevel === 'Owner' ? '#f59e0b' : '#ef4444' }}>{permissionLevel}</strong>
+          <User size={12} /> Editing as: <strong style={{ color: (permissionLevel === 'Owner' || permissionLevel === 'Developer') ? '#f59e0b' : '#ef4444' }}>{permissionLevel}</strong>
         </div>
       </div>
 
@@ -329,7 +330,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
             >
               <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleAvatarUpload}
                      style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                     disabled={avatarUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator')} />
+                     disabled={avatarUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator' && permissionLevel !== 'Developer')} />
               
               {avatarUploading ? (
                 <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--primary)' }}>
@@ -351,7 +352,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
                 </div>
               )}
             </div>
-            {permissionLevel !== 'Owner' && permissionLevel !== 'Administrator' && (
+            {permissionLevel !== 'Owner' && permissionLevel !== 'Administrator' && permissionLevel !== 'Developer' && (
               <div style={{ marginTop:12, fontSize:13, color:'var(--error)', display:'flex', alignItems:'center', gap:6 }}>
                 <Lock size={14} /> Only Administrators can upload server branding.
               </div>
@@ -371,7 +372,7 @@ export default function BotProfile({ guildId, permissionLevel, addToast }: BotPr
             >
               <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleBannerUpload}
                      style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%', zIndex:10 }}
-                     disabled={bannerUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator')} />
+                     disabled={bannerUploading || (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator' && permissionLevel !== 'Developer')} />
               
               {bannerUploading ? (
                 <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'var(--primary)' }}>

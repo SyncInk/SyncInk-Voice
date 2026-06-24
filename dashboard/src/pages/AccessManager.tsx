@@ -13,13 +13,20 @@ interface Role {
 
 interface AccessManagerProps {
   guildId: string | null;
-  permissionLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
+  permissionLevel: 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
   addToast: (type: 'success' | 'error' | 'warning' | 'info', msg: string) => void;
 }
 
-export type AccessLevel = 'low' | 'medium' | 'high' | 'critical';
+export type AccessLevel = 'low' | 'medium' | 'high' | 'critical' | 'developer';
 
 const ACCESS_LEVEL_META: Record<AccessLevel, { label: string; description: string; tone: string; iconUrl: string; gradientText?: string }> = {
+  developer: {
+    label: 'Developer',
+    description: 'Manage server settings, toggles, and most dashboard sections.',
+    tone: '#3b82f6',
+    iconUrl: 'https://cdn.discordapp.com/emojis/1519379532409344142.png',
+    gradientText: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #f472b6 100%)'
+  },
   critical: {
     label: 'Owner',
     description: 'Manage server settings, toggles, and most dashboard sections.',
@@ -62,6 +69,7 @@ const safePermissions = (value?: string) => {
 const getSuggestedLevel = (role: Role, allRoles: Role[]) => {
   const name = role.name.toLowerCase();
   const perms = safePermissions(role.permissions);
+  if (name.includes('dev')) return 'developer' as const;
   if (name.includes('owner')) return 'critical' as const;
   if (name.includes('admin') || (perms & ADMIN_MASK) === ADMIN_MASK) return 'critical' as const;
   if (name.includes('mod') || name.includes('manager') || (perms & MANAGE_GUILD_MASK) === MANAGE_GUILD_MASK) return 'high' as const;
@@ -159,7 +167,7 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
     );
   }
 
-  if (permissionLevel !== 'Owner' && permissionLevel !== 'Administrator') {
+  if (permissionLevel !== 'Developer' && permissionLevel !== 'Owner' && permissionLevel !== 'Administrator') {
     return (
       <div className="page-content">
         <InfoBanner message="You need to be an Administrator or Owner to access this page." />
@@ -191,7 +199,8 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
   }
 
   const addableRoles = allRoles.filter(r => !allowedRoles.some(ar => ar.roleId === r.id));
-  const levelCounts = {
+  const levelCounts: Record<AccessLevel, number> = {
+    developer: allowedRoles.filter(r => r.level === 'developer').length,
     critical: allowedRoles.filter(r => r.level === 'critical').length,
     high: allowedRoles.filter(r => r.level === 'high').length,
     medium: allowedRoles.filter(r => r.level === 'medium').length,

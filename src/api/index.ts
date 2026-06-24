@@ -198,16 +198,19 @@ const userHasManageGuild = (guild: DiscordGuild) => {
   }
 };
 
-const ACCESS_LEVEL_ORDER: Record<'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner', number> = {
+const ACCESS_LEVEL_ORDER: Record<'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | 'Developer', number> = {
   Member: 0,
   Staff: 1,
   Moderator: 2,
   Administrator: 3,
   Owner: 4,
+  Developer: 5,
 };
 
-const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' => {
+const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | 'Developer' => {
   switch (level) {
+    case 'developer':
+      return 'Developer';
     case 'critical':
       return 'Owner';
     case 'high':
@@ -224,8 +227,8 @@ const mapDashboardAccessLevel = (level: string | undefined | null): 'Member' | '
 const getGuildPermissionLevel = (
   guild: DiscordGuild,
   memberPermissions?: bigint | null,
-  accessLevel?: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner',
-): 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' => {
+  accessLevel?: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | 'Developer',
+): 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' => {
   if (guild.owner) return 'Owner';
 
   if (accessLevel) return accessLevel;
@@ -368,8 +371,8 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
 
     const memberPermissions = member.permissions?.bitfield ?? null;
     const accessDoc = accessDocs.find(d => d.guildId === guild.id);
-    let matchedAccessLevel: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | null = null;
-    let permLevel: 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' = 'Member';
+    let matchedAccessLevel: 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | 'Developer' | null = null;
+    let permLevel: 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member' = 'Member';
 
     if (userHasManageGuild(guild)) {
       permLevel = getGuildPermissionLevel(guild, memberPermissions);
@@ -381,7 +384,7 @@ const getManageableGuilds = async (bot: SyncinkBot, sessionUser: DiscordUser, ac
         matchedAccessLevel = matchingRoles.reduce((highest, role) => {
           const mapped = mapDashboardAccessLevel(role.level);
           return ACCESS_LEVEL_ORDER[mapped] > ACCESS_LEVEL_ORDER[highest] ? mapped : highest;
-        }, 'Member' as 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner');
+        }, 'Member' as 'Member' | 'Staff' | 'Moderator' | 'Administrator' | 'Owner' | 'Developer');
         permLevel = getGuildPermissionLevel(guild, memberPermissions, matchedAccessLevel);
       }
     }

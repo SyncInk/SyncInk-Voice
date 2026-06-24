@@ -13,11 +13,12 @@ interface SidebarProps {
   onSelectGuild: (g: Guild) => void;
 }
 
-export type PermLevel = 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
+export type PermLevel = 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
 
 const IconImg = ({ src }: { src: string }) => <img src={src} style={{ width: 12, height: 12, objectFit: 'contain' }} alt="" />;
 
 const PERM_CONFIG: Record<PermLevel, { color: string; bg: string; icon: React.ReactNode; label: string; gradientText?: string }> = {
+  Developer:     { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: <IconImg src="https://cdn.discordapp.com/emojis/1519379532409344142.png" />, label: 'Developer', gradientText: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #f472b6 100%)' },
   Owner:         { color: '#f472b6', bg: 'rgba(244,114,182,0.12)',  icon: <IconImg src="https://cdn.discordapp.com/emojis/1513803214674464788.webp?size=40" />, label: 'Owner', gradientText: 'linear-gradient(90deg, #8b5cf6 0%, #f472b6 50%, #fb923c 100%)' },
   Administrator: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924309668823160.webp?size=40" />, label: 'Administrator' },
   Moderator:     { color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',    icon: <IconImg src="https://cdn.discordapp.com/emojis/1518924931482779809.webp?size=40" />, label: 'Moderator'     },
@@ -68,18 +69,17 @@ const getRequirementLabel = (to: string) => {
   return 'Available to all';
 };
 
-// Which nav items each role can access (true = visible, false = locked/hidden)
 export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
-  '/setup':          { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
-  '/server-toggles': { Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
-  '/role-toggles':   { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
-  '/access':         { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
-  '/misc':           { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
-  '/bot-profile':    { Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
-  '/interface':      { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
-  '/global-profile': { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
-  '/invite':         { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
-  '/guide':          { Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/setup':          { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
+  '/server-toggles': { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: false, Member: false },
+  '/role-toggles':   { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
+  '/access':         { Developer: true, Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/misc':           { Developer: true, Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/bot-profile':    { Developer: true, Owner: true,  Administrator: true,  Moderator: false, Staff: false, Member: false },
+  '/interface':      { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: false },
+  '/global-profile': { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/invite':         { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/guide':          { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
 };
 
 const NavItem = ({
