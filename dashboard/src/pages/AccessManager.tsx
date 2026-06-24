@@ -222,7 +222,7 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 12, marginBottom: 18 }}>
-        {(['developer', 'critical', 'high', 'medium', 'low'] as AccessLevel[]).map((level) => (
+        {(['critical', 'developer', 'high', 'medium', 'low'] as AccessLevel[]).map((level) => (
           <div key={level} className="card" style={{ padding: 16, borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Access Tier</div>
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -306,8 +306,8 @@ export default function AccessManager({ guildId, permissionLevel, addToast }: Ac
                       value={ar.level}
                       onChange={(e) => changeLevel(ar.roleId, e.target.value as AccessLevel)}
                     >
-                      <option value="developer">Developer (Full Access)</option>
                       <option value="critical">Owner (Full Access)</option>
+                      <option value="developer">Developer (Full Access)</option>
                       <option value="high">Administrator (Manage Server)</option>
                       <option value="medium">Moderator (Manage VC)</option>
                       <option value="low">Staff (Limited UI)</option>
