@@ -261,7 +261,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     case 'btn_claim_room': {
       if (!voiceChannel.members.has(interaction.user.id)) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Not in Voice Channel', 'You must be inside the voice channel to use this button.')],
+          embeds: [buildRoomEmbed('<a:sync_refused_box:1519090690200567859> Not In Voice Channel', 'You must be inside the voice channel to use this button.')],
           ephemeral: true,
         });
       }
@@ -302,7 +302,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:sync_approved_check_box:1519090351766507603> Ownership Claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
         ephemeral: true,
       });
       return;

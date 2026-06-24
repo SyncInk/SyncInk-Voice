@@ -176,7 +176,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     await tempChannel.save();
     await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
     await interaction.reply({
-      embeds: [buildRoomEmbed('Ownership claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+      embeds: [buildRoomEmbed('<a:sync_approved_check_box:1519090351766507603> Ownership Claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
       ephemeral: true,
     });
     return;
