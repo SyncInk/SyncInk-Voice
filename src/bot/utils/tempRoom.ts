@@ -90,20 +90,12 @@ export const buildRoomEmbed = (title: string, description?: string) => {
   
   const customEmojiMatch = title.match(/^(<a?:\w+:(\d+)>)\s*(.*)/);
   if (customEmojiMatch) {
-    const emojiId = customEmojiMatch[2];
-    const cleanTitle = customEmojiMatch[3] || 'Notice';
-    const isAnimated = customEmojiMatch[1].startsWith('<a:');
-    
-    embed.setAuthor({
-      name: cleanTitle,
-      iconURL: `https://cdn.discordapp.com/emojis/${emojiId}.${isAnimated ? 'gif' : 'png'}`
-    });
+    embed.setDescription(`**${title}**${description ? `\n\n${description}` : ''}`);
   } else {
     embed.setTitle(title);
-  }
-
-  if (description) {
-    embed.setDescription(description);
+    if (description) {
+      embed.setDescription(description);
+    }
   }
 
   return embed;
@@ -257,11 +249,7 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
 const buildOwnerReturnedEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x57f287)
-    .setAuthor({
-      name: 'Ownership protection restored',
-      iconURL: 'https://cdn.discordapp.com/emojis/1518997998128988160.gif'
-    })
-    .setDescription('The room owner returned in time, so ownership protection has been cancelled.')
+    .setDescription('**<a:sync_check_yes:1518997998128988160> Ownership protection restored**\n\nThe room owner returned in time, so ownership protection has been cancelled.')
     .addFields({
       name: 'Room',
       value: roomName,
@@ -272,11 +260,7 @@ const buildOwnerReturnedEmbed = (roomName: string) =>
 const buildOwnershipExpiredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xfee75c)
-    .setAuthor({
-      name: 'Ownership transfer available',
-      iconURL: 'https://cdn.discordapp.com/emojis/1518903037257846874.gif'
-    })
-    .setDescription('The 3-minute protection window expired. Ownership can now be transferred if needed.')
+    .setDescription('**<a:syncink_voice_alert:1518903037257846874> Ownership transfer available**\n\nThe 3-minute protection window expired. Ownership can now be transferred if needed.')
     .addFields({
       name: 'Room',
       value: roomName,
@@ -287,11 +271,7 @@ const buildOwnershipExpiredEmbed = (roomName: string) =>
 const buildOwnershipTransferredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x8b5cf6)
-    .setAuthor({
-      name: 'Ownership transferred',
-      iconURL: 'https://cdn.discordapp.com/emojis/1518997998128988160.gif'
-    })
-    .setDescription('Room ownership has been handed over successfully.')
+    .setDescription('**<a:sync_check_yes:1518997998128988160> Ownership transferred**\n\nRoom ownership has been handed over successfully.')
     .addFields({
       name: 'Room',
       value: roomName,
