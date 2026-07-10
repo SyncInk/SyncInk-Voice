@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, User, Globe,
   Monitor, BookOpen, ChevronDown, Mic2,
-  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench
+  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -123,6 +123,7 @@ const NavItem = ({
 export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [legalOpen, setLegalOpen] = useState(false);
 
   const permLevel: PermLevel = (selectedGuild?.permissionLevel as PermLevel) ?? 'Member';
   const filtered = guilds.filter(g => g.name.toLowerCase().includes(search.toLowerCase()) && g.botPresent);
@@ -211,12 +212,45 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
       <div className="sidebar-divider" />
 
       <div className="sidebar-section">
-        <div className="sidebar-section-title">Help</div>
+        <div className="sidebar-section-title">Help & Resources</div>
         <NavItem to="/faq" icon={<HelpCircle size={16} />} label="FAQ" permLevel={permLevel} />
-        <NavItem to="/privacy" icon={<Shield size={16} />} label="Privacy Policy" permLevel={permLevel} />
-        <NavItem to="/terms" icon={<FileText size={16} />} label="Terms of Service" permLevel={permLevel} />
         <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} />
         <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} />
+        
+        <div 
+          onClick={() => setLegalOpen(!legalOpen)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 12px', borderRadius: 12, margin: '1px 0',
+            color: legalOpen ? 'var(--text-primary)' : 'var(--text-muted)',
+            cursor: 'pointer', transition: 'all 0.2s', fontSize: 13, userSelect: 'none',
+            background: legalOpen ? 'rgba(255,255,255,0.03)' : 'transparent'
+          }}
+          onMouseEnter={e => {
+            if (!legalOpen) {
+              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+            }
+          }}
+          onMouseLeave={e => {
+            if (!legalOpen) {
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FileText size={16} /> Legal
+          </div>
+          <ChevronRight size={14} style={{ transform: legalOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', opacity: 0.5 }} />
+        </div>
+        
+        {legalOpen && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginLeft: 12, paddingLeft: 12, borderLeft: '1px solid var(--border)', marginTop: 4, marginBottom: 4 }}>
+            <NavItem to="/privacy" icon={<Shield size={14} />} label="Privacy Policy" permLevel={permLevel} />
+            <NavItem to="/terms" icon={<FileText size={14} />} label="Terms of Service" permLevel={permLevel} />
+          </div>
+        )}
       </div>
 
       <div className="sidebar-bottom">

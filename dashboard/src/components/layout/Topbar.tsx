@@ -1,5 +1,6 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, ChevronDown, Shield, FileText } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 
 interface TopbarProps {
   user?: { username: string; avatarUrl?: string; globalName?: string | null; id?: string };
@@ -8,13 +9,45 @@ interface TopbarProps {
 
 export const Topbar = ({ user, onLogout }: TopbarProps) => {
   const displayName = user?.globalName || user?.username || 'User';
+  const [legalOpen, setLegalOpen] = useState(false);
+  const legalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (legalRef.current && !legalRef.current.contains(e.target as Node)) {
+        setLegalOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header className="topbar">
       <nav className="topbar-nav">
         <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
         <NavLink to="/faq" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>FAQ</NavLink>
-        <NavLink to="/privacy" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Privacy</NavLink>
-        <NavLink to="/terms" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Terms</NavLink>
+        
+        <div className="topbar-dropdown" ref={legalRef} style={{ position: 'relative' }}>
+          <button 
+            className={`topbar-link ${legalOpen ? 'active' : ''}`}
+            onClick={() => setLegalOpen(!legalOpen)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}
+          >
+            Legal <ChevronDown size={14} style={{ transform: legalOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+          
+          {legalOpen && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 6, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+              <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                <Shield size={14} /> Privacy Policy
+              </NavLink>
+              <NavLink to="/terms" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                <FileText size={14} /> Terms of Service
+              </NavLink>
+            </div>
+          )}
+        </div>
         <NavLink to="/invite" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Invite Bot</NavLink>
         <NavLink to="/guide" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Guide</NavLink>
         <NavLink to="/" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
