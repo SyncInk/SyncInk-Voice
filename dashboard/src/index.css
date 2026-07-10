@@ -417,24 +417,32 @@ a:hover { color: var(--primary); }
 .topbar-link.active { color: var(--text-primary); }
 
 .topbar-dropdown-item {
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text-muted);
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
   text-decoration: none;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 10px;
+  transition: all 0.2s ease;
   background: transparent;
-  transform-origin: center;
 }
 .topbar-dropdown-item:hover,
 .topbar-dropdown-item.active {
-  background: rgba(88, 101, 242, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.03);
+}
+.topbar-dropdown-item svg {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+.topbar-dropdown-item:hover svg,
+.topbar-dropdown-item.active svg {
   color: var(--primary);
-  box-shadow: 0 0 15px rgba(88, 101, 242, 0.4);
-  transform: scale(1.02);
+  filter: drop-shadow(0 0 8px rgba(88, 101, 242, 0.6));
 }
 
 .topbar-right {

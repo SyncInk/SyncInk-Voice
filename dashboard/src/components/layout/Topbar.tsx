@@ -49,9 +49,9 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
                 style={{ 
                   position: 'absolute', top: '100%', left: 0, marginTop: 8, 
                   background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
-                  borderRadius: 'var(--radius-md)', padding: 6, minWidth: 160, 
+                  borderRadius: 'var(--radius-md)', padding: 6, minWidth: 180, 
                   display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, 
-                  boxShadow: '0 0 25px rgba(88, 101, 242, 0.4), 0 10px 25px rgba(0,0,0,0.8)' 
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.6)' 
                 }}
               >
                 <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`}>
