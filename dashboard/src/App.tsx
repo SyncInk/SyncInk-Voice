@@ -79,6 +79,17 @@ function ProtectedRoute({ children, path, permLevel }: { children: React.ReactNo
   return <>{children}</>;
 }
 
+function PublicLayout({ children, user, onLogout }: { children: React.ReactNode; user?: AuthUser | null; onLogout?: () => void }) {
+  return (
+    <div className="app-layout">
+      <div className="main-content" style={{ marginLeft: 0, width: '100%', maxWidth: '100%' }}>
+        <Topbar user={user || undefined} onLogout={onLogout} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout, addToast }: {
   user: AuthUser;
   guilds: Guild[];
@@ -107,8 +118,6 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
             <Route path="/interface" element={<ProtectedRoute path="/interface" permLevel={permLevel}><motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Interface addToast={addToast} /></motion.div></ProtectedRoute>} />
             <Route path="/invite" element={<ProtectedRoute path="/invite" permLevel={permLevel}><motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><InviteBot /></motion.div></ProtectedRoute>} />
             <Route path="/guide" element={<ProtectedRoute path="/guide" permLevel={permLevel}><motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div></ProtectedRoute>} />
-            <Route path="/privacy" element={<ProtectedRoute path="/privacy" permLevel={permLevel}><motion.div key="privacy" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><PrivacyTerms /></motion.div></ProtectedRoute>} />
-            <Route path="/faq" element={<ProtectedRoute path="/faq" permLevel={permLevel}><motion.div key="faq" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><FAQ /></motion.div></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
@@ -203,21 +212,28 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {!user ? (
-        <LoginPage onLogin={handleLogin} />
-      ) : (
-        <DashboardLayout
-          user={user}
-          guilds={guilds}
-          selectedGuild={selectedGuild}
-          onSelectGuild={(g) => {
-            localStorage.setItem('syncink_selected_guild', g.id);
-            setSelectedGuild(g);
-          }}
-          onLogout={handleLogout}
-          addToast={addToast}
-        />
-      )}
+      <Routes>
+        <Route path="/privacy" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><PrivacyTerms /></motion.div></PublicLayout>} />
+        <Route path="/faq" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><FAQ /></motion.div></PublicLayout>} />
+        
+        <Route path="*" element={
+          !user ? (
+            <LoginPage onLogin={handleLogin} />
+          ) : (
+            <DashboardLayout
+              user={user}
+              guilds={guilds}
+              selectedGuild={selectedGuild}
+              onSelectGuild={(g) => {
+                localStorage.setItem('syncink_selected_guild', g.id);
+                setSelectedGuild(g);
+              }}
+              onLogout={handleLogout}
+              addToast={addToast}
+            />
+          )
+        } />
+      </Routes>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </BrowserRouter>
   );
