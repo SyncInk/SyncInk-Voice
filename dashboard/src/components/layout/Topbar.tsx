@@ -1,6 +1,7 @@
 import { LogOut, ChevronDown, Shield, FileText } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TopbarProps {
   user?: { username: string; avatarUrl?: string; globalName?: string | null; id?: string };
@@ -37,16 +38,30 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
             Legal <ChevronDown size={14} style={{ transform: legalOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
           
-          {legalOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 6, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-              <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
-                <Shield size={14} /> Privacy Policy
-              </NavLink>
-              <NavLink to="/terms" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
-                <FileText size={14} /> Terms of Service
-              </NavLink>
-            </div>
-          )}
+          <AnimatePresence>
+            {legalOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                style={{ 
+                  position: 'absolute', top: '100%', left: 0, marginTop: 8, 
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
+                  borderRadius: 'var(--radius-md)', padding: 6, minWidth: 160, 
+                  display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, 
+                  boxShadow: '0 0 20px rgba(100, 100, 255, 0.15), 0 10px 25px rgba(0,0,0,0.5)' 
+                }}
+              >
+                <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                  <Shield size={14} /> Privacy Policy
+                </NavLink>
+                <NavLink to="/terms" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                  <FileText size={14} /> Terms of Service
+                </NavLink>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <NavLink to="/invite" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Invite Bot</NavLink>
         <NavLink to="/guide" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Guide</NavLink>
