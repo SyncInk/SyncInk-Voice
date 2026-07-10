@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Settings, ToggleLeft, Shield, Wrench, User, Globe,
-  Monitor, BookOpen, ChevronDown, RefreshCw, Mic2,
-  Lock, Plus
+  Settings, ToggleLeft, Shield, User, Globe,
+  Monitor, BookOpen, ChevronDown, Mic2,
+  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -209,6 +209,8 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
 
       <div className="sidebar-section">
         <div className="sidebar-section-title">Help</div>
+        <NavItem to="/faq" icon={<HelpCircle size={16} />} label="FAQ" permLevel={permLevel} />
+        <NavItem to="/privacy" icon={<FileText size={16} />} label="Privacy & Terms" permLevel={permLevel} />
         <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} />
         <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} />
       </div>

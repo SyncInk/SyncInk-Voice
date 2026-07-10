@@ -12,6 +12,8 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
     <header className="topbar">
       <nav className="topbar-nav">
         <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
+        <NavLink to="/faq" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>FAQ</NavLink>
+        <NavLink to="/privacy" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Privacy & Terms</NavLink>
         <NavLink to="/invite" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Invite Bot</NavLink>
         <NavLink to="/guide" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Guide</NavLink>
         <NavLink to="/" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>

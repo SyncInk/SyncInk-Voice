@@ -17,6 +17,8 @@ import Interface, { applyPrefs } from './pages/Interface';
 import AccessManager from './pages/AccessManager';
 import Guide from './pages/Guide';
 import InviteBot from './pages/InviteBot';
+import PrivacyTerms from './pages/PrivacyTerms';
+import FAQ from './pages/FAQ';
 import type { Guild } from './types';
 
 import './index.css';
@@ -105,6 +107,8 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
             <Route path="/interface" element={<ProtectedRoute path="/interface" permLevel={permLevel}><motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Interface addToast={addToast} /></motion.div></ProtectedRoute>} />
             <Route path="/invite" element={<ProtectedRoute path="/invite" permLevel={permLevel}><motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><InviteBot /></motion.div></ProtectedRoute>} />
             <Route path="/guide" element={<ProtectedRoute path="/guide" permLevel={permLevel}><motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div></ProtectedRoute>} />
+            <Route path="/privacy" element={<ProtectedRoute path="/privacy" permLevel={permLevel}><motion.div key="privacy" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><PrivacyTerms /></motion.div></ProtectedRoute>} />
+            <Route path="/faq" element={<ProtectedRoute path="/faq" permLevel={permLevel}><motion.div key="faq" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><FAQ /></motion.div></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
