@@ -41,6 +41,7 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
           <AnimatePresence>
             {legalOpen && (
               <motion.div 
+                key="legal-dropdown-menu"
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -50,7 +51,7 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
                   background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
                   borderRadius: 'var(--radius-md)', padding: 6, minWidth: 160, 
                   display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, 
-                  boxShadow: '0 0 20px rgba(100, 100, 255, 0.15), 0 10px 25px rgba(0,0,0,0.5)' 
+                  boxShadow: '0 0 25px rgba(88, 101, 242, 0.4), 0 10px 25px rgba(0,0,0,0.8)' 
                 }}
               >
                 <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
