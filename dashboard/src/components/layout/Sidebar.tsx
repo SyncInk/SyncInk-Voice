@@ -80,6 +80,8 @@ export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/global-profile': { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/invite':         { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/guide':          { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/faq':            { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/privacy':        { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
 };
 
 const NavItem = ({
