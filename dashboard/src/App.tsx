@@ -17,7 +17,8 @@ import Interface, { applyPrefs } from './pages/Interface';
 import AccessManager from './pages/AccessManager';
 import Guide from './pages/Guide';
 import InviteBot from './pages/InviteBot';
-import PrivacyTerms from './pages/PrivacyTerms';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import FAQ from './pages/FAQ';
 import type { Guild } from './types';
 
@@ -213,7 +214,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/privacy" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><PrivacyTerms /></motion.div></PublicLayout>} />
+        <Route path="/privacy" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Privacy /></motion.div></PublicLayout>} />
+        <Route path="/terms" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Terms /></motion.div></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><FAQ /></motion.div></PublicLayout>} />
         
         <Route path="*" element={
