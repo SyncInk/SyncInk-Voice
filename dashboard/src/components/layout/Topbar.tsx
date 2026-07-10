@@ -54,10 +54,10 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
                   boxShadow: '0 0 25px rgba(88, 101, 242, 0.4), 0 10px 25px rgba(0,0,0,0.8)' 
                 }}
               >
-                <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                <NavLink to="/privacy" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`}>
                   <Shield size={14} /> Privacy Policy
                 </NavLink>
-                <NavLink to="/terms" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}>
+                <NavLink to="/terms" onClick={() => setLegalOpen(false)} className={({ isActive }) => `topbar-dropdown-item ${isActive ? 'active' : ''}`}>
                   <FileText size={14} /> Terms of Service
                 </NavLink>
               </motion.div>
