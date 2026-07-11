@@ -24,8 +24,8 @@ const FAQS = [
     a: "Yes! By default, only the Server Owner and Administrators can log into the Dashboard. However, you can use the 'Dashboard Access' page to grant lower-tier access (like Moderator or Staff) to specific Discord roles."
   },
   {
-    q: "Why is the bot asking for Administrator permissions?",
-    a: "We ask for Administrator by default to ensure the bot works instantly without complex setup. However, you can uncheck Administrator and manually provide: Manage Channels, Manage Roles, Move Members, Manage Webhooks, and Send Messages."
+    q: "What permissions does the bot require?",
+    a: "The bot only requests the specific permissions it needs to function properly (Permission Integer: 823151632). It requires permissions such as Manage Channels, Manage Roles, Move Members, Manage Webhooks, and Send Messages, rather than requiring full Administrator access."
   }
 ];
 
