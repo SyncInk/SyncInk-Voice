@@ -5,19 +5,19 @@ import { useState } from 'react';
 const FAQS = [
   {
     q: "Why doesn't the bot respond to commands?",
-    a: "Ensure that SyncInk Voice has the 'Send Messages' and 'Embed Links' permissions in the channel you are trying to use commands. Also, check that your server has not restricted slash commands for regular members in Server Settings > Integrations."
+    a: "Ensure that SyncInk Voice has the `Send Messages` and `Embed Links` permissions in the channel you are trying to use commands. Also, check that your server has not restricted slash commands for regular members in Server Settings > Integrations."
   },
   {
     q: "How do I setup Custom Bot Branding?",
-    a: "Go to the 'Bot Profile' tab on the Dashboard. From there, you can set a custom Username and Avatar. Make sure the bot has the 'Manage Webhooks' permission, as it uses Discord Webhooks to dynamically change its identity in your temporary rooms."
+    a: "Go to the 'Bot Profile' tab on the Dashboard. From there, you can set a custom Username and Avatar. Make sure the bot has the `Manage Webhooks` permission, as it uses Discord Webhooks to dynamically change its identity in your temporary rooms."
   },
   {
     q: "Why are empty temporary rooms not being deleted?",
-    a: "The bot deletes rooms immediately when everyone leaves. If a room is stuck, it means the bot lacks the 'Manage Channels' permission, or a discord API outage delayed the voice update event."
+    a: "The bot deletes rooms immediately when everyone leaves. If a room is stuck, it means the bot lacks the `Manage Channels` permission, or a discord API outage delayed the voice update event."
   },
   {
     q: "How does the 'Lock' button work?",
-    a: "When a room owner clicks 'Lock' on the Control Panel, the bot removes the 'Connect' permission for the @everyone role on that specific voice channel. Members who are already inside will not be kicked."
+    a: "When a room owner clicks 'Lock' on the Control Panel, the bot removes the `Connect` permission for the @everyone role on that specific voice channel. Members who are already inside will not be kicked."
   },
   {
     q: "Can I restrict who can use the Dashboard?",
@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: "What permissions does the bot require?",
-    a: "The bot only requests the specific permissions it needs to function properly (Permission Integer: 823151632). It requires permissions such as Manage Channels, Manage Roles, Move Members, Manage Webhooks, and Send Messages, rather than requiring full Administrator access."
+    a: "The bot only requests the specific permissions it needs to function properly (Permission Integer: 823151632). It requires permissions such as `Manage Channels`, `Manage Roles`, `Move Members`, `Manage Webhooks`, and `Send Messages`, rather than requiring full Administrator access."
   }
 ];
 
@@ -40,6 +40,30 @@ export default function FAQ() {
   const itemVars = {
     hidden: { opacity: 0, y: 15 },
     visible: { opacity: 1, y: 0 }
+  };
+
+  const renderAnswer = (text: string) => {
+    const parts = text.split(/`([^`]+)`/g);
+    return (
+      <>
+        {parts.map((part, i) => 
+          i % 2 === 1 ? (
+            <code key={i} style={{ 
+              background: 'rgba(30, 31, 34, 1)', 
+              padding: '2px 6px', 
+              borderRadius: 4, 
+              fontFamily: 'Consolas, monospace', 
+              color: 'var(--text-primary)',
+              fontSize: '0.9em'
+            }}>
+              {part}
+            </code>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
   };
 
   return (
@@ -94,7 +118,7 @@ export default function FAQ() {
                       transition={{ duration: 0.2 }}
                     >
                       <div style={{ padding: '0 24px 24px 24px', color: 'var(--text-muted)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                        {faq.a}
+                        {renderAnswer(faq.a)}
                       </div>
                     </motion.div>
                   )}
