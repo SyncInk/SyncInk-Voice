@@ -619,7 +619,7 @@ export default function Setup({ guildId, permLevel, addToast }: Props) {
   const [search, setSearch] = useState('');
   const [fetchError, setFetchError] = useState(false);
 
-  const canEdit = permLevel === 'Owner' || permLevel === 'Administrator';
+  const canEdit = ['Developer', 'Owner', 'Administrator', 'Moderator', 'Staff'].includes(permLevel || '');
 
   const loadData = useCallback(async () => {
     if (!guildId) return;
