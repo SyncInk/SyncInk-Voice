@@ -170,6 +170,7 @@ a:hover { color: var(--primary); }
   gap: 10px;
   padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .sidebar-logo img {
@@ -191,6 +192,7 @@ a:hover { color: var(--primary); }
 
 .sidebar-section {
   padding: 16px 12px 8px;
+  flex-shrink: 0;
 }
 
 .sidebar-section-title {
@@ -209,6 +211,7 @@ a:hover { color: var(--primary); }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .server-selector-header {
