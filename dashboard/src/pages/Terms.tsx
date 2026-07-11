@@ -65,7 +65,14 @@ export default function Terms() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>5. Changes to Terms</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>5. Intellectual Property & Copyright</h3>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                The "SyncInk Voice" name, brand identity, custom dashboard design, layout, and unique interface are the exclusive intellectual property of SyncInk. Any unauthorized copying, distribution, reproduction, or imitation of our visual design, UI elements, or brand assets is strictly prohibited and protected under international copyright law. You may not replicate our aesthetic or branding for competing products.
+              </p>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>6. Changes to Terms</h3>
               <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
                 We reserve the right to modify or replace these Terms at any time. We will notify users of any significant changes via our Support Server or Dashboard announcements.
               </p>

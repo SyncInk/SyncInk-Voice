@@ -37,7 +37,7 @@ export default function Privacy() {
               </p>
               <ul style={{ color: 'var(--text-muted)', lineHeight: 1.6, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <li><strong>Identifiers:</strong> Discord Server IDs, Channel IDs, Role IDs, and User IDs for configuration routing.</li>
-                <li><strong>Caching:</strong> We temporarily cache your Discord Tag and Avatar URL solely for displaying them in your server's audit logs.</li>
+                <li><strong>Caching:</strong> We temporarily cache your Discord Tag to display them on your dashboard profile.</li>
                 <li><strong>Settings:</strong> Any toggles, configurations, or text inputs you explicitly save via our Dashboard or Bot commands.</li>
               </ul>
             </div>
@@ -79,7 +79,6 @@ export default function Privacy() {
               { perm: 'Manage Channels', desc: 'Allows the bot to dynamically create, edit, and delete temporary voice and text channels.' },
               { perm: 'Manage Roles', desc: 'Required to modify channel permission overrides when a room owner clicks the "Lock", "Hide", or "Permit User" buttons.' },
               { perm: 'Move Members', desc: 'Used to automatically drag users from the "Join to Create" hub into their new temporary room, or to kick users.' },
-              { perm: 'Manage Webhooks', desc: 'Powers the "Custom Branding" feature, allowing the bot to send disguised messages into text channels using your custom Avatar and Nickname.' },
               { perm: 'Send Messages / Embed Links', desc: 'Required to post the interactive Control Panel and "Looking for Members" alerts.' },
             ].map((p, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: 'var(--bg-primary)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
