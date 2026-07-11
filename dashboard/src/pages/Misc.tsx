@@ -27,7 +27,8 @@ const loggingLabels: Record<string, string> = {
 const initial = {
   loggingChannelId: '',
   lfmChannelId: '',
-  loggingEnabled: true,
+  lfmMessage: '',
+  loggingEnabled: false,
   loggingEvents: Object.fromEntries(loggingEvents.map(e => [e, true])),
 };
 
@@ -52,7 +53,7 @@ export default function Misc({ guildId, addToast }: Props) {
 
     Promise.all([
       fetchJsonWithRetry<{ categories?: { id: string; name: string }[]; text?: { id: string; name: string; parentId: string | null }[] }>(`/api/guilds/${guildId}/channels`, { credentials: 'include' }),
-      fetchJsonWithRetry<{ loggingChannelId?: string | null; lfmChannelId?: string | null; loggingEvents?: Record<string, boolean> }>(`/api/guilds/${guildId}/logging`, { credentials: 'include' })
+      fetchJsonWithRetry<{ loggingChannelId?: string | null; lfmChannelId?: string | null; lfmMessage?: string; loggingEvents?: Record<string, boolean> }>(`/api/guilds/${guildId}/logging`, { credentials: 'include' })
     ]).then(([channelsData, loggingData]) => {
       if (!channelsData.ok) throw new Error((channelsData.data as any)?.error || 'Failed to load channels');
       if (!loggingData.ok) throw new Error((loggingData.data as any)?.error || 'Failed to load logging settings');
@@ -63,6 +64,7 @@ export default function Misc({ guildId, addToast }: Props) {
       const loadedState = {
         loggingChannelId: loggingData.data?.loggingChannelId || '',
         lfmChannelId: loggingData.data?.lfmChannelId || '',
+        lfmMessage: loggingData.data?.lfmMessage || '',
         loggingEnabled: !!loggingData.data?.loggingChannelId,
         loggingEvents: { ...initial.loggingEvents, ...(loggingData.data?.loggingEvents || {}) },
       };
@@ -93,7 +95,8 @@ export default function Misc({ guildId, addToast }: Props) {
         body: JSON.stringify({
           loggingChannelId: state.loggingEnabled ? state.loggingChannelId : '',
           lfmChannelId: state.lfmChannelId,
-          loggingEvents: state.loggingEvents,
+          lfmMessage: state.lfmMessage,
+          loggingEvents: state.loggingEnabled ? state.loggingEvents : {},
         }),
       });
       if (!res.ok) throw new Error((res.data as any)?.error || 'Failed to save settings');
@@ -197,6 +200,21 @@ export default function Misc({ guildId, addToast }: Props) {
                   );
                 })}
               </select>
+            </div>
+          </div>
+          
+          <div className="section-header" style={{ marginTop: 24 }}>
+            <div style={{ width: '100%' }}>
+              <div className="section-label">LFM Custom Text</div>
+              <div className="section-desc" style={{ marginBottom: 12 }}>Customize the text message sent in the LFM channel. Leave blank to use the default text. Use {'{roomName}'} and {'{ownerName}'} as placeholders.</div>
+              <input
+                className="select-input"
+                style={{ width: '100%', background: 'var(--bg-input)' }}
+                placeholder="e.g., 📢 {ownerName} is looking for more members in {roomName}!"
+                value={state.lfmMessage}
+                onChange={e => setState(s => ({ ...s, lfmMessage: e.target.value }))}
+                maxLength={200}
+              />
             </div>
           </div>
         </div>

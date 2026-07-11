@@ -270,7 +270,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         .setEmoji('🔗');
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn);
-      const embed = buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit);
+      const embed = buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit, settings?.lfmMessage);
 
       let msgId: string | null = null;
 

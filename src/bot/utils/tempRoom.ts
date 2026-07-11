@@ -186,15 +186,20 @@ export const buildLookingForMembersEmbed = (
   channelName: string,
   memberCount: number,
   limit: number,
-) =>
-  new EmbedBuilder()
+  lfmMessage?: string,
+) => {
+  const customMessage = lfmMessage
+    ? lfmMessage.replace(/{roomName}/g, channelName).replace(/{ownerName}/g, member.displayName)
+    : `**${channelName}** is looking for more members.`;
+
+  return new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
       name: member.displayName,
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
     .setTitle('<a:sync_alert:1518314359024124016> Looking for members')
-    .setDescription(`**${channelName}** is looking for more members.`)
+    .setDescription(customMessage)
     .addFields(
       {
         name: 'Channel',
@@ -209,6 +214,7 @@ export const buildLookingForMembersEmbed = (
     )
     .setFooter({ text: 'Looking for members' })
     .setTimestamp();
+};
 
 const getPanelMarker = (voiceChannelId: string) => `${PANEL_FOOTER_PREFIX} | ${voiceChannelId}`;
 

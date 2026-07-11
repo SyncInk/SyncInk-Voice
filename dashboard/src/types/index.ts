@@ -22,6 +22,7 @@ export interface GuildSettings {
   guildId: string;
   logChannelId: string | null;
   lfmChannelId: string | null;
+  lfmMessage: string;
   staffRoleId: string | null;
   memberRoleId: string | null;
   textChannelRoleId: string | null;

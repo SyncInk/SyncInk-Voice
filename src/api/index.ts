@@ -1228,6 +1228,7 @@ export const startApi = (bot: SyncinkBot) => {
       return res.json({
         loggingChannelId: loggingDoc?.loggingChannelId || null,
         lfmChannelId: loggingDoc?.lfmChannelId || null,
+        lfmMessage: loggingDoc?.lfmMessage || '',
         loggingEvents: loggingDoc?.loggingEvents || {}
       });
     } catch (error) {
@@ -1252,12 +1253,12 @@ export const startApi = (bot: SyncinkBot) => {
         return res.status(403).json({ error: 'Administrator permissions required to edit Logging Configuration.' });
       }
 
-      const { loggingChannelId, loggingEvents, lfmChannelId } = req.body;
+      const { loggingChannelId, loggingEvents, lfmChannelId, lfmMessage } = req.body;
 
       console.log(`[API-DEBUG] Writing Logging/LFM Config to DB for guild ${guildId}`);
       const updated = await GuildSettings.findOneAndUpdate(
         { guildId },
-        { $set: { loggingChannelId, loggingEvents, lfmChannelId } },
+        { $set: { loggingChannelId, loggingEvents, lfmChannelId, lfmMessage } },
         { new: true, upsert: true }
       );
       if (!updated) throw new Error('Database save returned falsey');
