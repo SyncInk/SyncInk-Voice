@@ -4,25 +4,32 @@ import { useState } from 'react';
 
 const FAQS = [
   {
-    q: "Why doesn't the bot respond to commands?",
-    a: "Ensure that SyncInk Voice has the `Send Messages` and `Embed Links` permissions in the channel you are trying to use commands. Also, check that your server has not restricted slash commands for regular members in Server Settings > Integrations."
-  },
-
-  {
-    q: "Why are empty temporary rooms not being deleted?",
-    a: "The bot deletes rooms immediately when everyone leaves. If a room is stuck, it means the bot lacks the `Manage Channels` permission, or a discord API outage delayed the voice update event."
+    q: "How does the 'Join to Create' system actually work?",
+    a: "When you assign a Voice Channel as a Hub, the bot listens for the Discord API's voice state update events. The moment a user connects to the Hub, the bot dynamically provisions a new child voice channel and seamlessly moves the user into it. The Hub itself remains empty and ready for the next user."
   },
   {
-    q: "How does the 'Lock' button work?",
-    a: "When a room owner clicks 'Lock' on the Control Panel, the bot removes the `Connect` permission for the @everyone role on that specific voice channel. Members who are already inside will not be kicked."
+    q: "What happens to active rooms if the bot restarts?",
+    a: "SyncInk Voice is designed with a stateless architecture for voice channels. It does not rely on a fragile local database to track active rooms. If the bot goes offline and restarts, it instantly scans all child channels bound to your Hubs and cleanly deletes any that are empty, ensuring no orphaned channels are ever left behind."
   },
   {
-    q: "Can I restrict who can use the Dashboard?",
-    a: "Yes! By default, only the Server Owner and Administrators can log into the Dashboard. However, you can use the 'Dashboard Access' page to grant lower-tier access (like Moderator or Staff) to specific Discord roles."
+    q: "How does the 'Lock' button technically function?",
+    a: "When a room owner clicks 'Lock' on their Control Panel, the bot dynamically updates the channel's permission overwrites (ACL). It explicitly denies the `Connect` permission for the @everyone role on that specific voice channel. Members already inside remain unaffected, but new users cannot join."
   },
   {
-    q: "What permissions does the bot require?",
-    a: "The bot only requests the specific permissions it needs to function properly (Permission Integer: 823151632). It requires permissions such as `Manage Channels`, `Manage Roles`, `Move Members`, and `Send Messages`, rather than requiring full Administrator access."
+    q: "Why does the bot need 'Manage Roles' if it only manages channels?",
+    a: "To securely operate features like 'Permit User' or 'Hide Room', the bot must create user-specific permission overwrites on the voice channel. Discord's API requires the `Manage Roles` permission to modify any channel-level access controls, even when the bot is targeting individual users rather than server-wide roles."
+  },
+  {
+    q: "How is the Web Dashboard secured?",
+    a: "Dashboard authentication utilizes Discord's official OAuth2 flow. When you log in, we only retrieve your User ID and server list. We then query the Discord API in real-time to verify if you possess `Administrator` privileges or own the server. No user passwords or auth tokens are permanently stored."
+  },
+  {
+    q: "Can I grant Dashboard access to my server Moderators?",
+    a: "Yes. While we default to Server Owners and Administrators for strict security, you can use the 'Dashboard Access' page to grant lower-tier access. This allows you to whitelist specific Discord roles (like Staff or Moderators) to pass the OAuth2 check and configure the bot."
+  },
+  {
+    q: "Exactly what permissions does the bot require?",
+    a: "The bot operates on the principle of least privilege. It requires `Manage Channels` (to spawn rooms), `Manage Roles` (to handle lock/permit overwrites), `Move Members` (to drag users from the Hub), and `Send Messages` (to post the Control Panel). You can supply exactly these permissions (Permission Integer: 823151632) instead of granting full Administrator access."
   }
 ];
 
