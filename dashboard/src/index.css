@@ -151,7 +151,7 @@ a:hover { color: var(--primary); }
 /* === SIDEBAR === */
 .sidebar {
   width: var(--sidebar-width);
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg-sidebar);
   backdrop-filter: var(--backdrop-blur);
   border-right: 1px solid var(--border);
