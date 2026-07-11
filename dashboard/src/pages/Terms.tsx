@@ -74,7 +74,7 @@ export default function Terms() {
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>6. Changes to Terms</h3>
               <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                We reserve the right to modify or replace these Terms at any time. We will notify users of any significant changes via our Support Server or Dashboard announcements.
+                We reserve the right to modify or replace these Terms at any time. We will notify users of any significant changes via our <a href="https://discord.gg/FnsJYbmW4A" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Support Server</a> or Dashboard announcements.
               </p>
             </div>
           </div>
