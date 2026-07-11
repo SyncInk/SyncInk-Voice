@@ -48,8 +48,8 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 style={{ 
                   position: 'absolute', top: '100%', left: 0, marginTop: 8, 
-                  background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
-                  borderRadius: 'var(--radius-md)', padding: 6, minWidth: 180, 
+                  background: 'rgba(14, 10, 26, 0.75)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border)', 
+                  borderRadius: '12px', padding: 6, minWidth: 180, 
                   display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, 
                   boxShadow: '0 10px 40px rgba(0,0,0,0.6)' 
                 }}
