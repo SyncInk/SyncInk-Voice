@@ -71,7 +71,7 @@ export default function Privacy() {
           </div>
           
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-            SyncInk requests Administrator by default to ensure a seamless setup experience, but you can restrict it to granular permissions. Here is exactly what we use each permission for:
+            SyncInk Voice operates strictly on the principle of least privilege. We do not request or require Administrator permissions. Below is a comprehensive breakdown of the exact granular permissions our bot utilizes to function:
           </p>
 
           <div style={{ display: 'grid', gap: 12 }}>
