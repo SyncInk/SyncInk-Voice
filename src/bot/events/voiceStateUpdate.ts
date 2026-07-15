@@ -1,4 +1,4 @@
-import { ChannelType, TextChannel, VoiceChannel, VoiceState, ActionRowBuilder, ButtonBuilder } from 'discord.js';
+import { ChannelType, TextChannel, VoiceChannel, VoiceState, ActionRowBuilder, ButtonBuilder, PermissionFlagsBits } from 'discord.js';
 import { SyncinkBot } from '../bot';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { GuildSetup } from '../../database/models/GuildSetup';
@@ -82,11 +82,20 @@ export const handleVoiceStateUpdate = async (
           permissionOverwrites: [
             {
               id: member.id,
-              allow: ['ViewChannel', 'Connect'],
+              allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
             },
             {
               id: guild.client.user!.id,
-              allow: ['ViewChannel', 'Connect', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory', 'ManageChannels', 'ManageRoles', 'MoveMembers'],
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.Connect,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.EmbedLinks,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageChannels,
+                PermissionFlagsBits.ManageRoles,
+                PermissionFlagsBits.MoveMembers
+              ],
             },
           ],
         });
