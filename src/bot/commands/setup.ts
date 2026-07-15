@@ -33,7 +33,7 @@ export const data = new SlashCommandBuilder()
   );
 
 export const execute = async (interaction: ChatInputCommandInteraction) => {
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: true });
 
   try {
     const guild = interaction.guild;
@@ -84,10 +84,10 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     );
 
     await interaction.editReply({
-      content: `Syncink Voice is ready. The Join to Create voice channel is in ${category} and room controls will appear inside each room's linked text chat.`,
+      content: `<a:syncink_tick:1517565342469951558> **Syncink Voice has been successfully configured.**\n\nUsers can now join the "Join to Create" channel in the **${category.name}** category. Room controls will be automatically generated inside the linked text chat of each temporary room.`,
     });
   } catch (error) {
     console.error('[Setup] Error:', error);
-    await interaction.editReply({ content: 'Failed to set up Syncink Voice.' });
+    await interaction.editReply({ content: '<a:sync_alert:1518314359024124016> **Setup Failed:** Ensure the bot has `Manage Channels` and `Manage Roles` permissions.' });
   }
 };
