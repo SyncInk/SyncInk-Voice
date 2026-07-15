@@ -70,24 +70,30 @@ export const handleVoiceStateUpdate = async (
       const categoryId = setup?.categoryId ?? settings?.setupCategoryId ?? newState.channel?.parentId ?? undefined;
       const rtcRegion = setup?.defaultRegion ?? null;
 
-      const newChannel = await guild.channels.create({
-        name: formatRoomName(rawTemplate, member),
-        type: ChannelType.GuildVoice,
-        parent: categoryId || undefined,
-        userLimit,
-        bitrate,
-        rtcRegion: rtcRegion ?? undefined,
-        permissionOverwrites: [
-          {
-            id: member.id,
-            allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers'],
-          },
-          {
-            id: guild.client.user!.id,
-            allow: ['ViewChannel', 'Connect', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory', 'ManageChannels', 'ManageRoles'],
-          },
-        ],
-      });
+      let newChannel: VoiceChannel;
+      try {
+        newChannel = await guild.channels.create({
+          name: formatRoomName(rawTemplate, member),
+          type: ChannelType.GuildVoice,
+          parent: categoryId || undefined,
+          userLimit,
+          bitrate,
+          rtcRegion: rtcRegion ?? undefined,
+          permissionOverwrites: [
+            {
+              id: member.id,
+              allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers'],
+            },
+            {
+              id: guild.client.user!.id,
+              allow: ['ViewChannel', 'Connect', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory', 'ManageChannels', 'ManageRoles', 'MoveMembers'],
+            },
+          ],
+        });
+      } catch (err) {
+        console.error(`[Join to Create] Failed to create voice channel in guild ${guild.id}:`, err);
+        return;
+      }
 
       await newState.setChannel(newChannel);
 
