@@ -360,7 +360,12 @@ export const ensureRoomTextChannel = async (
       },
       {
         id: guild.client.user!.id,
-        allow: [PermissionFlagsBits.ViewChannel],
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.EmbedLinks,
+          PermissionFlagsBits.ReadMessageHistory,
+        ],
       },
       ...voiceChannel.members.map((voiceMember) => ({
         id: voiceMember.id,

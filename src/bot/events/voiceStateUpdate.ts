@@ -84,6 +84,13 @@ export const handleVoiceStateUpdate = async (
               id: member.id,
               allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
             },
+            {
+              id: guild.client.user!.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.Connect,
+              ],
+            },
           ],
         });
       } catch (err) {

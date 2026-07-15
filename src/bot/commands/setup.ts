@@ -56,6 +56,17 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
       });
     }
 
+    try {
+      await category.permissionOverwrites.edit(guild.client.user!.id, {
+        ViewChannel: true,
+        ManageChannels: true,
+        ManageRoles: true,
+        MoveMembers: true,
+      });
+    } catch (err) {
+      console.warn(`[Setup] Could not enforce category permissions for ${guild.id}`);
+    }
+
     if (!createChannel) {
       createChannel = await guild.channels.create({
         name: 'Join to Create',

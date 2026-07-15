@@ -162,10 +162,11 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       });
       await channel.send({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[MentionableSelect] Error:', error);
+    const errorMessage = error?.message || String(error);
     const payload = {
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', 'I could not apply that change. Check my channel permissions (`Manage Roles`, `Move Members`) and try again.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', `I could not apply that change.\n**Error Details:** \`${errorMessage}\`\n\nCheck my channel permissions (\`Manage Roles\`, \`Move Members\`) and try again.`)],
       components: [],
     };
 
