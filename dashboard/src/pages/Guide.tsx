@@ -60,7 +60,7 @@ export default function Guide() {
           Contact the Syncink Voice team directly through our website.
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-          <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer">
+          <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer">
             <button className="btn btn-primary">Contact Support</button>
           </a>
           <a href="https://syncink.github.io/syncink-portfolio/" target="_blank" rel="noopener noreferrer">

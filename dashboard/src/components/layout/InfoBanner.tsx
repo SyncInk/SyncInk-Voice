@@ -9,7 +9,7 @@ export const InfoBanner = ({ message }: { message: string }) => {
       <Info size={15} />
       <span>
         {message}{' '}
-        <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer">
+        <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer">
           Contact Support
         </a>
         {' '}or send us a message with your issue.

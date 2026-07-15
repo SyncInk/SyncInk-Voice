@@ -26,7 +26,7 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
   return (
     <header className="topbar">
       <nav className="topbar-nav">
-        <a href="https://syncink.github.io/syncink-portfolio/#contact" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
+        <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
         <NavLink to="/faq" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>FAQ</NavLink>
         
         <div className="topbar-dropdown" ref={legalRef} style={{ position: 'relative' }}>
