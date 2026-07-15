@@ -1,7 +1,7 @@
 import { motion, type Variants } from 'framer-motion';
 import { Mic2, Settings, Shield, ExternalLink, X } from 'lucide-react';
 
-const INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=823151632&integration_type=0&scope=bot+applications.commands";
+const INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=286346256&integration_type=0&scope=bot+applications.commands";
 
 export default function InviteBot() {
   const containerVars: Variants = {

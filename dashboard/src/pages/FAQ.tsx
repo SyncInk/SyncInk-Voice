@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "Exactly what permissions does the bot require?",
-    a: "The bot operates on the principle of least privilege. It requires `Manage Channels` (to spawn rooms), `Manage Roles` (to handle lock/permit overwrites), `Move Members` (to drag users from the Hub), and `Send Messages` (to post the Control Panel). You can supply exactly these permissions (Permission Integer: 823151632) instead of granting full Administrator access."
+    a: "The bot operates on the principle of least privilege. It requires `Manage Channels` (to spawn rooms), `Manage Roles` (to handle lock/permit overwrites), `Move Members` (to drag users from the Hub), and standard channel permissions (`View Channel`, `Send Messages`, `Embed Links`, `Read Message History`, `Connect`). You can supply exactly these permissions (Permission Integer: 286346256) instead of granting full Administrator access."
   }
 ];
 
