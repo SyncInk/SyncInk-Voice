@@ -44,14 +44,14 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     const vc = guild.channels.cache.get(vcId) as VoiceChannel | undefined;
     if (!vc) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('Voice channel missing', 'This voice channel no longer exists.')],
+        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Voice channel missing', 'This voice channel no longer exists.')],
         ephemeral: true,
       });
     }
 
     if (vc.userLimit > 0 && vc.members.size >= vc.userLimit) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('Channel Full', 'This voice channel is currently full.')],
+        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Channel Full', 'This voice channel is currently full.')],
         ephemeral: true,
       });
     }
@@ -86,7 +86,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
   const tempChannel = await getTempChannelFromInteraction(interaction);
   if (!tempChannel) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('Temporary room not found', 'This control panel is not linked to an active temporary room.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Temporary room not found', 'This control panel is not linked to an active temporary room.')],
       ephemeral: true,
     });
   }
@@ -94,7 +94,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
   const voiceChannel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!voiceChannel) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('Voice channel missing', 'I could not find the voice channel for this room.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Voice channel missing', 'I could not find the voice channel for this room.')],
       ephemeral: true,
     });
   }
@@ -102,7 +102,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
   const ownerOnly = tempChannel.ownerId === interaction.user.id;
   if (!ownerOnly && interaction.customId !== 'btn_refresh_panel' && interaction.customId !== 'btn_claim_room') {
     return interaction.reply({
-      embeds: [buildRoomEmbed('Owner only', 'Only the current room owner can use these controls.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Owner only', 'Only the current room owner can use these controls.')],
       ephemeral: true,
     });
   }
@@ -113,7 +113,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     case 'btn_refresh_panel': {
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('Panel refreshed', 'The control panel has been updated.')],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Panel refreshed', 'The control panel has been updated.')],
         ephemeral: true,
       });
     }
@@ -162,7 +162,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed(`Applied ${applied.length} saved settings`, applied.join('\n'))],
+        embeds: [buildRoomEmbed(`<a:approved:1520901996389990440> Applied ${applied.length} saved settings`, applied.join('\n'))],
         ephemeral: true,
       });
     }
@@ -172,28 +172,28 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       tempChannel.isLocked = true;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('<:sync_close_ticket:1513811041694519326> Channel locked', 'No new users can join.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel locked', 'No new users can join.')], ephemeral: true });
 
     case 'btn_unlock':
       await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
       tempChannel.isLocked = false;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('<:syncunlocked:1519087149301891313> Channel unlocked', 'Users can freely join now.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel unlocked', 'Users can freely join now.')], ephemeral: true });
 
     case 'btn_hide':
       await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
       tempChannel.isHidden = true;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel hidden', 'Your channel is now invisible to others.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel hidden', 'Your channel is now invisible to others.')], ephemeral: true });
 
     case 'btn_unhide':
       await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
       tempChannel.isHidden = false;
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed('Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
 
     case 'btn_rename': {
       const modal = new ModalBuilder().setCustomId('modal_rename').setTitle('Rename Channel');
@@ -243,7 +243,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
         }
       }
 
-      await interaction.reply({ embeds: [buildRoomEmbed('Deleting channel', 'The temporary room is being removed.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Deleting channel', 'The temporary room is being removed.')], ephemeral: true });
 
       await TempChannel.deleteOne({ channelId: tempChannel.channelId });
 
@@ -261,21 +261,21 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     case 'btn_claim_room': {
       if (!voiceChannel.members.has(interaction.user.id)) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('<a:sync_refused_box:1519090690200567859> Not In Voice Channel', 'You must be inside the voice channel to use this button.')],
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Not In Voice Channel', 'You must be inside the voice channel to use this button.')],
           ephemeral: true,
         });
       }
 
       if (tempChannel.ownerId === interaction.user.id) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Already owner', 'You are already the owner of this VC.')],
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Already owner', 'You are already the owner of this VC.')],
           ephemeral: true,
         });
       }
 
       if (voiceChannel.members.has(tempChannel.ownerId)) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Owner is still here', 'You can only claim this room after the current owner leaves.')],
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Owner is still here', 'You can only claim this room after the current owner leaves.')],
           ephemeral: true,
         });
       }
@@ -302,13 +302,13 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       await tempChannel.save();
       await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('<a:sync_approved_check_box:1519090351766507603> Ownership Claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership Claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
         ephemeral: true,
       });
       return;
     }
 
     default:
-      return interaction.reply({ embeds: [buildRoomEmbed('Unknown action')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Unknown action')], ephemeral: true });
   }
 };

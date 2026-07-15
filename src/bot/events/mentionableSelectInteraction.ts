@@ -57,7 +57,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:sync_approved_check_box:1519090351766507603> Access permitted', `${mention} can now access the room.`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Access permitted', `${mention} can now access the room.`)],
         components: [],
       });
     }
@@ -94,7 +94,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<:sync_invite_people:1519004773297164358> Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
         components: [],
       });
     }
@@ -157,15 +157,15 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.editReply({
-        embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         components: [],
       });
-      await channel.send({ embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
+      await channel.send({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
     }
   } catch (error) {
     console.error('[MentionableSelect] Error:', error);
     const payload = {
-      embeds: [buildRoomEmbed('Action failed', 'I could not apply that change. Check my channel permissions and try again.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', 'I could not apply that change. Check my channel permissions (`Manage Roles`, `Move Members`) and try again.')],
       components: [],
     };
 

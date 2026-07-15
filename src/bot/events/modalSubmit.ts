@@ -54,7 +54,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('Channel renamed', `New name: **${newName}**`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Room renamed', `The room is now named **${newName}**.`)],
         ephemeral: true,
       });
     }
@@ -75,7 +75,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('Voice status updated', `Status: **${status}**`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Voice status updated', `Status: **${status}**`)],
         ephemeral: true,
       });
     }
@@ -84,7 +84,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       const limit = Number.parseInt(interaction.fields.getTextInputValue('input_limit'), 10);
       if (Number.isNaN(limit) || limit < 0 || limit > 99) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('Invalid limit', 'Limit must be between 0 and 99.')],
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Invalid limit', 'Limit must be between 0 and 99.')],
           ephemeral: true,
         });
       }
@@ -94,7 +94,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('User limit updated', `Limit: ${limit === 0 ? 'Unlimited' : limit}`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> User limit set', `The room limit is now **${limit === 0 ? 'Unlimited' : limit}**.`)],
         ephemeral: true,
       });
     }
@@ -142,14 +142,14 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
-        embeds: [buildRoomEmbed('<a:sync_check_yes:1518997998128988160> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
         ephemeral: true,
       });
     }
   } catch (error) {
     console.error('[Modal] Error:', error);
     return interaction.reply({
-      embeds: [buildRoomEmbed('Action failed', 'I could not apply that change. Check my permissions and try again.')],
+      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', 'I could not apply that change. Check my permissions and try again.')],
       ephemeral: true,
     });
   }
