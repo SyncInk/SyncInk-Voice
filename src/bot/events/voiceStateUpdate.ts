@@ -80,7 +80,7 @@ export const handleVoiceStateUpdate = async (
         permissionOverwrites: [
           {
             id: member.id,
-            allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers', 'DeafenMembers', 'MuteMembers'],
+            allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers'],
           },
           {
             id: guild.client.user!.id,
