@@ -84,7 +84,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     );
 
     await interaction.editReply({
-      content: `<a:approved:1520901996389990440> **Syncink Voice has been successfully configured.**\n\nUsers can now join the "Join to Create" channel in the **${category.name}** category. Room controls will be automatically generated inside the linked text chat of each temporary room.`,
+      content: `<a:approved:1520901996389990440> **Syncink Voice has been successfully configured.**\n\nUsers can now join <#${createChannel.id}> in the **${category.name}** category. Room controls will be automatically generated inside the linked text chat of each temporary room.`,
     });
   } catch (error) {
     console.error('[Setup] Error:', error);
