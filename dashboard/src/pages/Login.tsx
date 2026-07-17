@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Mic2, Settings, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -58,7 +59,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         </button>
 
         <div className="login-footer" style={{ marginTop: 24 }}>
-          Syncink Voice Dashboard • Free for everyone • Built with ♥
+          <div>Syncink Voice Dashboard • Free for everyone • Built with ♥</div>
+          <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
+            <Link to="/terms" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 12, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}>Terms</Link>
+            <Link to="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 12, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}>Privacy Policy</Link>
+            <Link to="/faq" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 12, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}>FAQ</Link>
+          </div>
         </div>
       </motion.div>
     </div>
