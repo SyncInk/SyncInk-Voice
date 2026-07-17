@@ -107,7 +107,7 @@ export const handleVoiceStateUpdate = async (
         userLimit: newChannel.userLimit || 0,
         bitrate: newChannel.bitrate,
         status: setup?.defaultStatus || null,
-        setupId: setup?._id ? String(setup._id) : (legacySettings?.setupChannelId === newState.channelId ? `legacy_${guildId}` : null),
+        setupId: setup?._id ? String(setup._id) : (settings?.setupChannelId === newState.channelId ? `legacy_${guildId}` : null),
       });
 
       if (setup?.defaultStatus) {
