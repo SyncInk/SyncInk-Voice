@@ -17,6 +17,7 @@ import {
   markPanelDeletionIgnored,
   refreshRoomPanel,
   toTextChannelName,
+  enforceFeature,
 } from '../utils/tempRoom';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { ENV } from '../../config/config';
@@ -196,6 +197,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       return interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
 
     case 'btn_rename': {
+      if (!(await enforceFeature(tempChannel, 'rename', interaction))) return;
       const modal = new ModalBuilder().setCustomId('modal_rename').setTitle('Rename Channel');
       const input = new TextInputBuilder()
         .setCustomId('input_name')
@@ -208,6 +210,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_limit': {
+      if (!(await enforceFeature(tempChannel, 'userLimit', interaction))) return;
       const modal = new ModalBuilder().setCustomId('modal_limit').setTitle('Set User Limit');
       const input = new TextInputBuilder()
         .setCustomId('input_limit')
@@ -219,6 +222,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_transfer': {
+      if (!(await enforceFeature(tempChannel, 'transfer', interaction))) return;
       const modal = new ModalBuilder().setCustomId('modal_opt_transfer').setTitle('Transfer Ownership');
       const input = new TextInputBuilder()
         .setCustomId('input_userid')

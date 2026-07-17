@@ -35,7 +35,7 @@ export interface IGuildSetup extends Document {
   createdAt: Date;
 }
 
-const featuresDefault: ISetupFeatures = {
+export const featuresDefault: ISetupFeatures = {
   rename: true,
   userLimit: true,
   status: true,

@@ -1,7 +1,7 @@
 import { MentionableSelectMenuInteraction, VoiceChannel } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel } from '../utils/tempRoom';
+import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, enforceFeature } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
 
 const getTempChannelFromInteraction = async (interaction: MentionableSelectMenuInteraction) => {
@@ -48,6 +48,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
   try {
     if (interaction.customId === 'mentionable_opt_permit') {
+      if (!(await enforceFeature(tempChannel, 'permit', interaction))) return;
       if (!isRole && !tempChannel.permittedUsers.includes(targetId)) {
         tempChannel.permittedUsers.push(targetId);
       }
@@ -63,6 +64,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     }
 
     if (interaction.customId === 'mentionable_opt_invite') {
+      if (!(await enforceFeature(tempChannel, 'invite', interaction))) return;
       if (isRole || !targetMember) {
         return interaction.editReply({
           embeds: [buildRoomEmbed('Select a user', 'Invites can only be sent to users, not roles.')],
@@ -100,6 +102,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     }
 
     if (interaction.customId === 'mentionable_opt_reject' || interaction.customId === 'mentionable_opt_kick') {
+      if (!(await enforceFeature(tempChannel, 'reject', interaction))) return;
       if (!isRole) {
         tempChannel.permittedUsers = tempChannel.permittedUsers.filter((id) => id !== targetId);
         if (!tempChannel.deniedUsers.includes(targetId)) {
@@ -130,6 +133,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     }
 
     if (interaction.customId === 'mentionable_opt_transfer') {
+      if (!(await enforceFeature(tempChannel, 'transfer', interaction))) return;
       if (isRole) {
         return interaction.editReply({
           embeds: [buildRoomEmbed('Select a user', 'Ownership cannot be transferred to a role.')],

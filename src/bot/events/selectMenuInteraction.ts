@@ -23,6 +23,7 @@ import {
   getDisplayNameParts,
   refreshRoomPanel,
   toTextChannelName,
+  enforceFeature,
 } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
 
@@ -135,7 +136,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   }
 
   if (interaction.customId === 'menu_settings' && value === 'opt_region') {
-    await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+    if (!(await enforceFeature(tempChannel, 'region', interaction))) return;
     return showRegionMenu(interaction);
   }
 
@@ -191,18 +192,23 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
   switch (value) {
     case 'opt_rename':
+      if (!(await enforceFeature(tempChannel, 'rename', interaction))) return;
       return showTextModal(interaction, 'modal_rename', 'Rename Channel', 'input_name', 'New channel name');
 
     case 'opt_status':
+      if (!(await enforceFeature(tempChannel, 'status', interaction))) return;
       return showTextModal(interaction, 'modal_status', 'Set Voice Status', 'input_status', 'Status text (shown under channel name)', 'e.g. Chilling');
 
     case 'opt_limit':
+      if (!(await enforceFeature(tempChannel, 'userLimit', interaction))) return;
       return showTextModal(interaction, 'modal_limit', 'Set User Limit', 'input_limit', 'Max users', '0 for unlimited');
 
     case 'opt_bitrate':
+      if (!(await enforceFeature(tempChannel, 'bitrate', interaction))) return;
       return showTextModal(interaction, 'modal_bitrate', 'Change Bitrate', 'input_bitrate', 'Bitrate in kbps', '8 - 384');
 
     case 'opt_game': {
+      if (!(await enforceFeature(tempChannel, 'rename', interaction))) return;
       const gameName = getCurrentGameName(member);
       if (!gameName) {
         await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
@@ -230,6 +236,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_text': {
+      if (!(await enforceFeature(tempChannel, 'textChannel', interaction))) return;
       const textCh = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', getDisplayNameParts(member));
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
@@ -240,6 +247,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_lfm': {
+      if (!(await enforceFeature(tempChannel, 'requestToJoin', interaction))) return;
       if (tempChannel.isLocked) {
         return interaction.reply({
           embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Channel Locked', 'You cannot use the LFM feature while your voice channel is locked.')],
@@ -303,6 +311,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_nsfw': {
+      if (!(await enforceFeature(tempChannel, 'nsfw', interaction))) return;
       const nextValue = !tempChannel.isNsfw;
       tempChannel.isNsfw = nextValue;
       await tempChannel.save();
@@ -324,6 +333,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     case 'opt_lock':
+      if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false });
       tempChannel.isLocked = true;
       await tempChannel.save();
@@ -332,6 +342,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       return;
 
     case 'opt_unlock':
+      if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
       tempChannel.isLocked = false;
       await tempChannel.save();
@@ -340,6 +351,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       return;
 
     case 'opt_hide':
+      if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
       tempChannel.isHidden = true;
       await tempChannel.save();
@@ -348,6 +360,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       return;
 
     case 'opt_unhide':
+      if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
       tempChannel.isHidden = false;
       await tempChannel.save();
@@ -359,6 +372,8 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     case 'opt_reject':
     case 'opt_invite':
     case 'opt_transfer': {
+      const featureKey = value.replace('opt_', '') as keyof typeof import('../../database/models/GuildSetup').featuresDefault;
+      if (!(await enforceFeature(tempChannel, featureKey, interaction))) return;
       const label =
         value === 'opt_reject'
           ? 'Select a user or role to reject'

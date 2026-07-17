@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { TempChannel, ITempChannel } from '../../database/models/TempChannel';
 import { GuildSettings, IGuildSettings } from '../../database/models/GuildSettings';
+import { GuildSetup, featuresDefault } from '../../database/models/GuildSetup';
 import { ENV } from '../../config/config';
 import { sendWebhookMessage } from './webhook';
 import { getPanelButtons, getPanelDropdowns } from './components';
@@ -56,6 +57,28 @@ const clearOwnershipWarningTimer = (guildId: string, channelId: string) => {
     clearTimeout(timer);
     ownershipWarningTimers.delete(key);
   }
+};
+
+export const isFeatureEnabled = async (tempChannel: ITempChannel, featureKey: keyof typeof featuresDefault): Promise<boolean> => {
+  let features = { ...featuresDefault };
+  if (tempChannel.setupId && !tempChannel.setupId.startsWith('legacy_')) {
+    const setup = await GuildSetup.findById(tempChannel.setupId).lean();
+    if (setup && setup.features) features = { ...features, ...setup.features };
+  }
+  return features[featureKey] !== false;
+};
+
+export const enforceFeature = async (tempChannel: ITempChannel, featureKey: keyof typeof featuresDefault, interaction: any): Promise<boolean> => {
+  const enabled = await isFeatureEnabled(tempChannel, featureKey);
+  if (!enabled) {
+    const disabledMsg = '<a:refused:1520914088568295564> This feature is currently disabled by the server administration.';
+    if (interaction.deferred) {
+      await interaction.editReply({ embeds: [buildRoomEmbed('Feature Disabled', disabledMsg)] });
+    } else {
+      await interaction.reply({ embeds: [buildRoomEmbed('Feature Disabled', disabledMsg)], ephemeral: true });
+    }
+  }
+  return enabled;
 };
 
 export const formatRoomName = (template: string, member: GuildMember) => {
