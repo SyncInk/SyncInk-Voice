@@ -1465,7 +1465,12 @@ export const startApi = (bot: SyncinkBot) => {
     try {
       const guild = await ensureGuildAccess(bot, session, guildId);
       if (!guild) return res.status(403).json({ error: 'No access to this server.' });
-      await GuildSetup.deleteOne({ _id: setupId, guildId });
+
+      if (setupId.startsWith('legacy_')) {
+        await GuildSettings.updateOne({ guildId }, { $unset: { setupChannelId: 1, setupCategoryId: 1 } });
+      } else {
+        await GuildSetup.deleteOne({ _id: setupId, guildId });
+      }
       
       invalidateGuildCache(guildId);
       return res.json({ success: true });
