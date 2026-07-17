@@ -25,6 +25,7 @@ import {
   toTextChannelName,
   enforceFeature,
 } from '../utils/tempRoom';
+import { getPanelDropdowns, getPanelButtons } from '../utils/components';
 import { ENV } from '../../config/config';
 
 const REGION_OPTIONS = [
@@ -121,6 +122,10 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
   const settings = await GuildSettings.findOne({ guildId: guild.id }).catch(() => null);
   const value = interaction.values[0];
+
+  if (interaction.customId.startsWith('menu_settings') || interaction.customId.startsWith('menu_users')) {
+    interaction.message.edit({ components: [...getPanelDropdowns(), ...getPanelButtons()] }).catch(() => null);
+  }
 
   if (interaction.customId === 'menu_region') {
     const region = value === 'automatic' ? null : value;
