@@ -21,8 +21,9 @@ export const getPanelButtons = () => {
 };
 
 export const getPanelDropdowns = () => {
+  const ts = Date.now();
   const settingsMenu = new StringSelectMenuBuilder()
-    .setCustomId('menu_settings')
+    .setCustomId(`menu_settings_${ts}`)
     .setPlaceholder('Room Settings')
     .addOptions(
       { label: 'Name', description: 'Change the channel name', value: 'opt_rename', emoji: { id: '1517255773405577416', name: 'syncinkvoicename' } },
@@ -38,7 +39,7 @@ export const getPanelDropdowns = () => {
     );
 
   const usersMenu = new StringSelectMenuBuilder()
-    .setCustomId('menu_users')
+    .setCustomId(`menu_users_${ts}`)
     .setPlaceholder('Room Permissions')
     .addOptions(
       { label: 'Lock', description: 'Lock the channel to everyone', value: 'opt_lock', emoji: { id: '1517255505490215212', name: 'syncinkvoicelock' } },

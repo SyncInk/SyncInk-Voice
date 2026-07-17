@@ -135,7 +135,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     return;
   }
 
-  if (interaction.customId === 'menu_settings' && value === 'opt_region') {
+  if (interaction.customId.startsWith('menu_settings') && value === 'opt_region') {
     if (!(await enforceFeature(tempChannel, 'region', interaction))) return;
     return showRegionMenu(interaction);
   }
