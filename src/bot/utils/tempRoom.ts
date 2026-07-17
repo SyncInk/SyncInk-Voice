@@ -71,11 +71,12 @@ export const isFeatureEnabled = async (tempChannel: ITempChannel, featureKey: ke
 export const enforceFeature = async (tempChannel: ITempChannel, featureKey: keyof typeof featuresDefault, interaction: any): Promise<boolean> => {
   const enabled = await isFeatureEnabled(tempChannel, featureKey);
   if (!enabled) {
-    const disabledMsg = '<a:refused:1520914088568295564> This feature is currently disabled by the server administration.';
+    const title = '<a:refused:1520914088568295564> Feature Disabled';
+    const disabledMsg = 'This feature is currently `disabled` by the server administration.';
     if (interaction.deferred) {
-      await interaction.editReply({ embeds: [buildRoomEmbed('Feature Disabled', disabledMsg)] });
+      await interaction.editReply({ embeds: [buildRoomEmbed(title, disabledMsg)] });
     } else {
-      await interaction.reply({ embeds: [buildRoomEmbed('Feature Disabled', disabledMsg)], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed(title, disabledMsg)], ephemeral: true });
     }
   }
   return enabled;
