@@ -165,10 +165,33 @@ export const buildControlPanelEmbed = (
   const statusText = tempChannel ? getRoomStatusLabel(tempChannel) : 'Public';
   const accessText = tempChannel?.isNsfw ? 'NSFW enabled' : 'NSFW disabled';
 
-  const embed1 = new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setTitle('Your Custom Audio Space')
-    .setDescription('Pick what you need and change it instantly through the menus below.')
+    .setDescription(
+      [
+        'Pick what you need and change it instantly through the menus below.',
+        '',
+        '-# ──────────────────────────────',
+        '',
+        '**Room Overview**',
+        `Owner: <@${roomOwner?.id || member.id}>`,
+        `Members: **${currentMembers}${currentLimit ? ` / ${currentLimit}` : ''}**`,
+        `Status: **${statusText}**`,
+        accessText,
+        '',
+        '-# ──────────────────────────────',
+        '',
+        '**Controls**',
+        'Use the first menu for room settings, and the second menu for permissions and access.',
+        'This panel stays synced with the dashboard, so changes show up everywhere.',
+        '',
+        '-# ──────────────────────────────',
+        '',
+        '**Quick Setup**',
+        'Use `/setup` once in each server to set the join-to-create channel, then manage everything here.',
+      ].join('\n')
+    )
     .setThumbnail(
       validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
@@ -176,41 +199,10 @@ export const buildControlPanelEmbed = (
     );
 
   if (validServerBanner) {
-    embed1.setImage(validServerBanner);
+    embed.setImage(validServerBanner);
   }
 
-  const embed2 = new EmbedBuilder()
-    .setColor(ENV.BRAND_COLOR)
-    .setDescription(
-      [
-        '**Room Overview**',
-        `Owner: <@${roomOwner?.id || member.id}>`,
-        `Members: **${currentMembers}${currentLimit ? ` / ${currentLimit}` : ''}**`,
-        `Status: **${statusText}**`,
-        accessText,
-      ].join('\n')
-    );
-
-  const embed3 = new EmbedBuilder()
-    .setColor(ENV.BRAND_COLOR)
-    .setDescription(
-      [
-        '**Controls**',
-        'Use the first menu for room settings, and the second menu for permissions and access.',
-        'This panel stays synced with the dashboard, so changes show up everywhere.',
-      ].join('\n')
-    );
-
-  const embed4 = new EmbedBuilder()
-    .setColor(ENV.BRAND_COLOR)
-    .setDescription(
-      [
-        '**Quick Setup**',
-        'Use `/setup` once in each server to set the join-to-create channel, then manage everything here.',
-      ].join('\n')
-    );
-
-  return [embed1, embed2, embed3, embed4];
+  return embed;
 };
 
 export const buildLookingForMembersEmbed = (
@@ -712,10 +704,10 @@ export const refreshRoomPanel = async (
     }
   }
 
-  const panelEmbeds = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
+  const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
     content: `<@${panelOwner.id}>`,
-    embeds: panelEmbeds,
+    embeds: [panelEmbed],
     components: [...getPanelDropdowns(), ...getPanelButtons()],
     allowedMentions: { users: [panelOwner.id] },
   };
