@@ -30,7 +30,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
         <h1 className="login-title">Syncink Voice</h1>
         <p className="login-subtitle">
-          The premium temporary voice channel bot. Manage your servers, customize your voice rooms, and take full control.
+          The advanced temporary voice channel bot. Manage your servers, customize your voice rooms, and take full control.
         </p>
 
         <div className="login-features">
