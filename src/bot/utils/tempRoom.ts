@@ -218,7 +218,7 @@ export const buildLookingForMembersEmbed = (
     : `**${channelName}** is looking for more members.`;
 
   const description = customUserMessage
-    ? `${serverMessage}\n\n> ${customUserMessage.split('\\n').join('\\n> ')}`
+    ? `${serverMessage}\n\`\`\`ansi\n\u001b[0;37m${customUserMessage}\u001b[0m\n\`\`\``
     : serverMessage;
 
   return new EmbedBuilder()
