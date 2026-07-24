@@ -57,8 +57,13 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await channel.permissionOverwrites.edit(targetId, { Connect: true, ViewChannel: true });
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+
+      const permitMessage = tempChannel.isLocked
+        ? `${mention} can now access the room.`
+        : `The room is currently unlocked, so everyone can already join. However, ${mention} has been added to the permitted list and will retain access if you lock the room later.`;
+
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Access permitted', `${mention} can now access the room.`)],
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Access permitted', permitMessage)],
         components: [],
       });
     }
@@ -126,8 +131,13 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       }
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+
+      const rejectMessage = tempChannel.isLocked
+        ? `${mention} can no longer access the room.`
+        : `Even though the room is unlocked, ${mention} has been explicitly rejected and can no longer join.`;
+
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:sync_refused_box:1519090690200567859> Access rejected', `${mention} can no longer access the room.`)],
+        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Access rejected', rejectMessage)],
         components: [],
       });
     }
