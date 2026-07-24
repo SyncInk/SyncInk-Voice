@@ -1,7 +1,8 @@
-import { ModalSubmitInteraction, TextChannel, VoiceChannel } from 'discord.js';
+import { ModalSubmitInteraction, TextChannel, VoiceChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
-import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, toTextChannelName } from '../utils/tempRoom';
+import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, toTextChannelName, buildLookingForMembersEmbed } from '../utils/tempRoom';
+import { sendWebhookMessage } from '../utils/webhook';
 import { ENV } from '../../config/config';
 
 const getTempChannelFromModal = async (interaction: ModalSubmitInteraction) => {
@@ -143,6 +144,55 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
         embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        ephemeral: true,
+      });
+    }
+
+    if (interaction.customId === 'modal_lfm') {
+      const customMsg = interaction.fields.getTextInputValue('input_lfm_msg').trim() || undefined;
+      const lfmChannelId = settings?.lfmChannelId;
+      
+      if (!lfmChannelId) {
+        return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Error', 'LFM is not configured.')], ephemeral: true });
+      }
+
+      const lfmChannel = guild.channels.cache.get(lfmChannelId);
+      if (!lfmChannel?.isTextBased()) {
+        return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Error', 'LFM channel is missing.')], ephemeral: true });
+      }
+
+      const joinBtn = new ButtonBuilder()
+        .setCustomId(`btn_lfm_join_vc_${tempChannel.channelId}`)
+        .setLabel('Join VC')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🔗');
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn);
+      const embed = buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit, settings?.lfmMessage, customMsg);
+
+      let msgId: string | null = null;
+      try {
+        const msg = await sendWebhookMessage(
+          lfmChannel as any,
+          { embeds: [embed], components: [row] },
+          { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname },
+        );
+        msgId = msg?.id || null;
+      } catch (err) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Error', 'Failed to send LFM message. Please check bot permissions.')],
+          ephemeral: true,
+        });
+      }
+
+      if (msgId) {
+        tempChannel.lfmChannelId = lfmChannelId;
+        await tempChannel.save().catch(() => null);
+      }
+
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
+      return interaction.reply({
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
         ephemeral: true,
       });
     }

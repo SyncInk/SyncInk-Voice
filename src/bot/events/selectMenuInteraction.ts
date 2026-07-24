@@ -278,42 +278,22 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         });
       }
 
-      const joinBtn = new ButtonBuilder()
-        .setCustomId(`btn_lfm_join_vc_${tempChannel.channelId}`)
-        .setLabel('Join VC')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('🔗');
+      const modal = new ModalBuilder()
+        .setCustomId('modal_lfm')
+        .setTitle('Looking For Members');
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn);
-      const embed = buildLookingForMembersEmbed(member, channel.name, channel.members.size, channel.userLimit, settings?.lfmMessage);
+      const msgInput = new TextInputBuilder()
+        .setCustomId('input_lfm_msg')
+        .setLabel('Custom Message (Optional)')
+        .setPlaceholder('Add a note like: "Looking for 2 more for Valorant Ranked!"')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(300);
 
-      let msgId: string | null = null;
+      const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(msgInput);
+      modal.addComponents(actionRow);
 
-      try {
-        const msg = await sendWebhookMessage(
-          lfmChannel as any,
-          { embeds: [embed], components: [row] },
-          { serverAvatar: settings?.serverAvatar, serverNickname: settings?.serverNickname },
-        );
-        msgId = msg?.id || null;
-      } catch (err) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Error', 'Failed to send LFM message. Please check bot permissions.')],
-          ephemeral: true,
-        });
-      }
-
-      if (msgId) {
-        tempChannel.lfmMessageId = msgId;
-        tempChannel.lfmChannelId = lfmChannelId;
-        await tempChannel.save().catch(() => null);
-      }
-
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
-        ephemeral: true,
-      });
+      await interaction.showModal(modal);
       return;
     }
 

@@ -211,10 +211,15 @@ export const buildLookingForMembersEmbed = (
   memberCount: number,
   limit: number,
   lfmMessage?: string,
+  customUserMessage?: string,
 ) => {
-  const customMessage = lfmMessage
+  const serverMessage = lfmMessage
     ? lfmMessage.replace(/{roomName}/g, channelName).replace(/{ownerName}/g, member.displayName)
     : `**${channelName}** is looking for more members.`;
+
+  const description = customUserMessage
+    ? `${serverMessage}\n\n> ${customUserMessage.split('\\n').join('\\n> ')}`
+    : serverMessage;
 
   return new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
@@ -223,7 +228,7 @@ export const buildLookingForMembersEmbed = (
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
     .setTitle('<a:sync_alert:1518314359024124016> Looking for members')
-    .setDescription(customMessage)
+    .setDescription(description)
     .addFields(
       {
         name: 'Channel',
