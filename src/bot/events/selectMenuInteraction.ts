@@ -10,6 +10,8 @@ import {
   VoiceChannel,
   ButtonBuilder,
   ButtonStyle,
+  OverwriteType,
+  PermissionFlagsBits,
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
@@ -337,41 +339,101 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       return;
     }
 
-    case 'opt_lock':
+    case 'opt_lock': {
       if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false });
+      
+      if (channel.parent) {
+        const updates = [];
+        for (const [id, overwrite] of channel.parent.permissionOverwrites.cache) {
+          if (overwrite.type === OverwriteType.Role && id !== guild.roles.everyone.id) {
+            if (tempChannel.permittedUsers.includes(id)) continue;
+            if (overwrite.allow.has(PermissionFlagsBits.Connect)) {
+              updates.push(channel.permissionOverwrites.edit(id, { Connect: false }).catch(() => null));
+            }
+          }
+        }
+        await Promise.all(updates);
+      }
+
       tempChannel.isLocked = true;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel locked', 'No new users can join.')], ephemeral: true });
       return;
+    }
 
-    case 'opt_unlock':
+    case 'opt_unlock': {
       if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
+      
+      if (channel.parent) {
+        const updates = [];
+        for (const [id, overwrite] of channel.parent.permissionOverwrites.cache) {
+          if (overwrite.type === OverwriteType.Role && id !== guild.roles.everyone.id) {
+            if (tempChannel.permittedUsers.includes(id)) continue;
+            if (overwrite.allow.has(PermissionFlagsBits.Connect)) {
+              updates.push(channel.permissionOverwrites.edit(id, { Connect: null }).catch(() => null));
+            }
+          }
+        }
+        await Promise.all(updates);
+      }
+
       tempChannel.isLocked = false;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel unlocked', 'Users can freely join.')], ephemeral: true });
       return;
+    }
 
-    case 'opt_hide':
+    case 'opt_hide': {
       if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
+      
+      if (channel.parent) {
+        const updates = [];
+        for (const [id, overwrite] of channel.parent.permissionOverwrites.cache) {
+          if (overwrite.type === OverwriteType.Role && id !== guild.roles.everyone.id) {
+            if (tempChannel.permittedUsers.includes(id)) continue;
+            if (overwrite.allow.has(PermissionFlagsBits.ViewChannel)) {
+              updates.push(channel.permissionOverwrites.edit(id, { ViewChannel: false }).catch(() => null));
+            }
+          }
+        }
+        await Promise.all(updates);
+      }
+
       tempChannel.isHidden = true;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel hidden', 'Your channel is now invisible.')], ephemeral: true });
       return;
+    }
 
-    case 'opt_unhide':
+    case 'opt_unhide': {
       if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
       await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
+      
+      if (channel.parent) {
+        const updates = [];
+        for (const [id, overwrite] of channel.parent.permissionOverwrites.cache) {
+          if (overwrite.type === OverwriteType.Role && id !== guild.roles.everyone.id) {
+            if (tempChannel.permittedUsers.includes(id)) continue;
+            if (overwrite.allow.has(PermissionFlagsBits.ViewChannel)) {
+              updates.push(channel.permissionOverwrites.edit(id, { ViewChannel: null }).catch(() => null));
+            }
+          }
+        }
+        await Promise.all(updates);
+      }
+
       tempChannel.isHidden = false;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
       return;
+    }
 
     case 'opt_permit':
     case 'opt_reject':
