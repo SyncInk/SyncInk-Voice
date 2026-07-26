@@ -186,7 +186,7 @@ export const handleVoiceStateUpdate = async (
       }
     }
 
-    if (oldState.channelId !== newState.channelId) {
+    if (oldState.channelId !== newState.channelId && !isGeneratorChannel) {
       await logEvent({
         guild,
         type: 'userMovement',
@@ -259,14 +259,31 @@ export const handleVoiceStateUpdate = async (
     }
 
     if (oldState.channelId !== newState.channelId) {
-      await logEvent({
-        guild,
-        type: 'userMovement',
-        title: 'User Left Voice',
-        description: `${member} left \`${oldChannel?.name || 'Voice Channel'}\``,
-        color: 0x95a5a6,
-        executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
-      });
+      const oldSetup = await GuildSetup.findOne({ guildId, generatorChannelId: oldState.channelId });
+      const isLeavingGeneratorChannel = Boolean(
+        (oldSetup && oldState.channelId === oldSetup.generatorChannelId) ||
+        (!oldSetup && settings?.setupChannelId === oldState.channelId)
+      );
+
+      if (isLeavingGeneratorChannel) {
+        await logEvent({
+          guild,
+          type: 'userMovement',
+          title: 'Moved to Temp VC',
+          description: `${member} was moved to their new temporary channel.`,
+          color: 0x95a5a6,
+          executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
+        });
+      } else {
+        await logEvent({
+          guild,
+          type: 'userMovement',
+          title: 'User Left Voice',
+          description: `${member} left \`${oldChannel?.name || 'Voice Channel'}\``,
+          color: 0x95a5a6,
+          executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
+        });
+      }
     }
   }
 };
