@@ -21,6 +21,7 @@ import {
 } from '../utils/tempRoom';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { ENV } from '../../config/config';
+import { logEvent } from '../utils/logger';
 
 const getTempChannelFromInteraction = async (interaction: ButtonInteraction) => {
   if (!interaction.channelId) {
@@ -65,6 +66,13 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       });
     }
 
+    if (tempChannel.permittedUsers.includes(interaction.user.id)) {
+      return interaction.reply({
+        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Already Claimed', `You already have access! Click <#${vc.id}> to join the voice channel.`)],
+        ephemeral: true,
+      });
+    }
+
     if (tempChannel.lfmCurrentUses !== undefined && tempChannel.lfmMaxUses !== undefined) {
       if (tempChannel.lfmCurrentUses >= tempChannel.lfmMaxUses) {
         return interaction.reply({
@@ -80,6 +88,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       Connect: true,
     }).catch(() => null);
 
+    tempChannel.permittedUsers.push(interaction.user.id);
     let maxUses = tempChannel.lfmMaxUses || 1;
     let currentUses = (tempChannel.lfmCurrentUses || 0) + 1;
     tempChannel.lfmCurrentUses = currentUses;
@@ -112,8 +121,16 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     
     await tempChannel.save().catch(() => null);
 
+    await logEvent({
+      guild,
+      type: 'interfaceUsage',
+      title: 'LFM Spot Claimed',
+      description: `${interaction.user} claimed a spot in \`${vc.name}\` via LFM (${currentUses}/${maxUses})`,
+      color: 0x57f287,
+    });
+
     return interaction.reply({
-      content: `You have been granted access! Click here to join: <#${vc.id}>`,
+      embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Access Granted', `You have been granted access! Click <#${vc.id}> to join the voice channel.`)],
       ephemeral: true,
     });
   }
