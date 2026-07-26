@@ -68,7 +68,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
 
     if (tempChannel.permittedUsers.includes(interaction.user.id)) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('<a:sync_alert:1518314359024124016> Already Claimed', `**You already have access to this voice channel.**`)],
+        embeds: [buildRoomEmbed('<a:syncwarning:1520914584012328961> You already have access to this voice channel.')],
         ephemeral: true,
       });
     }
