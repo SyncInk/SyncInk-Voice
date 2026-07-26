@@ -7,6 +7,7 @@ import {
   TextChannel,
   VoiceChannel,
   ButtonBuilder,
+  EmbedBuilder,
 } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { UserProfile } from '../../database/models/UserProfile';
@@ -67,8 +68,12 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     if (tempChannel.permittedUsers.includes(interaction.user.id)) {
+      const embed = new EmbedBuilder()
+        .setColor(ENV.BRAND_COLOR)
+        .setTitle('<a:syncwarning:1520914584012328961> You already have access to this voice channel.');
+        
       return interaction.reply({
-        embeds: [buildRoomEmbed('<a:syncwarning:1520914584012328961> You already have access to this voice channel.')],
+        embeds: [embed],
         ephemeral: true,
       });
     }
