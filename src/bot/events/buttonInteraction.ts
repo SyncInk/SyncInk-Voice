@@ -57,26 +57,60 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       });
     }
 
+    const tempChannel = await TempChannel.findOne({ channelId: vcId });
+    if (!tempChannel) {
+      return interaction.reply({
+        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Error', 'This LFM request is no longer active.')],
+        ephemeral: true,
+      });
+    }
+
+    if (tempChannel.lfmCurrentUses !== undefined && tempChannel.lfmMaxUses !== undefined) {
+      if (tempChannel.lfmCurrentUses >= tempChannel.lfmMaxUses) {
+        return interaction.reply({
+          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Claimed', 'This LFM request has already reached its maximum capacity.')],
+          ephemeral: true,
+        });
+      }
+    }
+
     // Grant access explicitly
     await vc.permissionOverwrites.edit(interaction.user.id, {
       ViewChannel: true,
       Connect: true,
     }).catch(() => null);
 
-    // Disable the button on the message
+    let maxUses = tempChannel.lfmMaxUses || 1;
+    let currentUses = (tempChannel.lfmCurrentUses || 0) + 1;
+    tempChannel.lfmCurrentUses = currentUses;
+    
+    const isFull = currentUses >= maxUses;
+
+    // Update or Disable the button on the message
     const msg = interaction.message;
     if (msg && msg.components.length > 0) {
       const row = msg.components[0] as any;
-      const disabledRow = new ActionRowBuilder<ButtonBuilder>();
+      const updatedRow = new ActionRowBuilder<ButtonBuilder>();
       row.components.forEach((c: any) => {
         if (c.customId === interaction.customId) {
-          disabledRow.addComponents(ButtonBuilder.from(c as any).setDisabled(true).setLabel('Claimed'));
+          if (isFull) {
+            updatedRow.addComponents(ButtonBuilder.from(c as any).setDisabled(true).setLabel('Claimed'));
+          } else {
+            updatedRow.addComponents(ButtonBuilder.from(c as any).setLabel(`Join VC (${currentUses}/${maxUses})`));
+          }
         } else {
-          disabledRow.addComponents(ButtonBuilder.from(c as any));
+          updatedRow.addComponents(ButtonBuilder.from(c as any));
         }
       });
-      await msg.edit({ components: [disabledRow] }).catch(() => null);
+      await msg.edit({ components: [updatedRow] }).catch(() => null);
     }
+
+    if (isFull) {
+      tempChannel.lfmMessageId = null;
+      tempChannel.lfmChannelId = null;
+    }
+    
+    await tempChannel.save().catch(() => null);
 
     return interaction.reply({
       content: `You have been granted access! Click here to join: <#${vc.id}>`,

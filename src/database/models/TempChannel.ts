@@ -20,6 +20,8 @@ export interface ITempChannel extends Document {
   ownerWarningExpiresAt?: Date | null;
   lfmMessageId?: string | null;
   lfmChannelId?: string | null;
+  lfmMaxUses?: number;
+  lfmCurrentUses?: number;
   setupId?: string | null;
 }
 
@@ -43,6 +45,8 @@ const TempChannelSchema = new Schema<ITempChannel>({
   ownerWarningExpiresAt: { type: Date, default: null },
   lfmMessageId: { type: String, default: null },
   lfmChannelId: { type: String, default: null },
+  lfmMaxUses: { type: Number, default: 1 },
+  lfmCurrentUses: { type: Number, default: 0 },
   setupId: { type: String, default: null },
 });
 

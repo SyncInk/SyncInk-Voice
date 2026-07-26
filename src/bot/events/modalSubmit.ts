@@ -150,6 +150,17 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
 
     if (interaction.customId === 'modal_lfm') {
       const customMsg = interaction.fields.getTextInputValue('input_lfm_msg').trim() || undefined;
+      let limit = 1;
+      try {
+        const rawLimit = interaction.fields.getTextInputValue('input_lfm_limit').trim();
+        if (rawLimit) {
+          const parsed = parseInt(rawLimit, 10);
+          if (!isNaN(parsed) && parsed > 0) limit = parsed;
+        }
+      } catch (e) {
+        // field might not exist if Discord caches old modals temporarily, default to 1
+      }
+
       const lfmChannelId = settings?.lfmChannelId;
       
       if (!lfmChannelId) {
@@ -163,7 +174,7 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
 
       const joinBtn = new ButtonBuilder()
         .setCustomId(`btn_lfm_join_vc_${tempChannel.channelId}`)
-        .setLabel('Join VC')
+        .setLabel(`Join VC (0/${limit})`)
         .setStyle(ButtonStyle.Primary)
         .setEmoji('🔗');
 
@@ -187,6 +198,9 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
 
       if (msgId) {
         tempChannel.lfmChannelId = lfmChannelId;
+        tempChannel.lfmMessageId = msgId;
+        tempChannel.lfmMaxUses = limit;
+        tempChannel.lfmCurrentUses = 0;
         await tempChannel.save().catch(() => null);
       }
 

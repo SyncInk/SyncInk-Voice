@@ -290,8 +290,17 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         .setRequired(false)
         .setMaxLength(300);
 
-      const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(msgInput);
-      modal.addComponents(actionRow);
+      const limitInput = new TextInputBuilder()
+        .setCustomId('input_lfm_limit')
+        .setLabel('Max Joins (Number)')
+        .setPlaceholder('How many people can join? (Default: 1)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(2);
+
+      const actionRow1 = new ActionRowBuilder<TextInputBuilder>().addComponents(msgInput);
+      const actionRow2 = new ActionRowBuilder<TextInputBuilder>().addComponents(limitInput);
+      modal.addComponents(actionRow1, actionRow2);
 
       await interaction.showModal(modal);
       return;
