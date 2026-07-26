@@ -66,7 +66,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
     }
   } else if (interaction.isButton()) {
     try {
-      if (interaction.guild) {
+      if (interaction.guild && !interaction.customId.startsWith('btn_lfm_join_vc_')) {
         await logEvent({
           guild: interaction.guild,
           type: 'interfaceUsage',
