@@ -1,4 +1,4 @@
-import { MentionableSelectMenuInteraction, VoiceChannel } from 'discord.js';
+import { MentionableSelectMenuInteraction, VoiceChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, enforceFeature } from '../utils/tempRoom';
@@ -90,13 +90,22 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         reason: `Temporary room invite from ${interaction.user.tag}`,
       });
 
+      const joinBtn = new ButtonBuilder()
+        .setLabel('Join VC')
+        .setURL(invite.url)
+        .setStyle(ButtonStyle.Link)
+        .setEmoji('🔗');
+        
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn);
+
       await targetMember.send({
         embeds: [
           buildRoomEmbed(
             '<:sync_invite_people:1519004773297164358> Voice room invite',
-            `<@${interaction.user.id}> invited you to join **${channel.name}**.\n${invite.url}`,
+            `<@${interaction.user.id}> invited you to join **${channel.name}**.`,
           ),
         ],
+        components: [row],
       }).catch(() => null);
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
