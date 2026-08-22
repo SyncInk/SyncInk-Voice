@@ -62,7 +62,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
       await command.execute(interaction);
     } catch (error) {
       console.error('[Interaction] Command error:', error);
-      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }).catch(() => null);
     }
   } else if (interaction.isButton()) {
     try {
@@ -78,7 +78,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
       await handleButtonInteraction(interaction);
     } catch (error) {
       console.error('[Interaction] Button error:', error);
-      await interaction.reply({ content: 'There was an error handling this button!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error handling this button!', ephemeral: true }).catch(() => null);
     }
   } else if (interaction.isStringSelectMenu()) {
     try {
@@ -96,7 +96,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
       await handleSelectMenuInteraction(interaction);
     } catch (error) {
       console.error('[Interaction] Select Menu error:', error);
-      await interaction.reply({ content: 'There was an error handling this menu!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error handling this menu!', ephemeral: true }).catch(() => null);
     }
   } else if (interaction.isModalSubmit()) {
     try {
@@ -113,7 +113,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
       await handleModalSubmit(interaction);
     } catch (error) {
       console.error('[Interaction] Modal Submit error:', error);
-      await interaction.reply({ content: 'There was an error handling this form!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error handling this form!', ephemeral: true }).catch(() => null);
     }
   } else if (interaction.isMentionableSelectMenu()) {
     const { handleMentionableSelectMenuInteraction } = require('./mentionableSelectInteraction');
@@ -142,7 +142,7 @@ export const handleInteractionCreate = async (client: SyncinkBot, interaction: I
       await handleMentionableSelectMenuInteraction(interaction);
     } catch (error) {
       console.error('[Interaction] Mentionable Select Menu error:', error);
-      await interaction.reply({ content: 'There was an error handling this selection!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error handling this selection!', ephemeral: true }).catch(() => null);
     }
   }
 };
