@@ -69,12 +69,8 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     if (tempChannel.permittedUsers.includes(interaction.user.id)) {
-      const embed = new EmbedBuilder()
-        .setColor(ENV.BRAND_COLOR)
-        .setTitle(`${EMOJIS.WARNING} You already have access to this voice channel.`);
-        
       return interaction.reply({
-        embeds: [embed],
+        embeds: [buildRoomEmbed(`${EMOJIS.WARNING} Access already granted`, 'You already have access to this voice channel.')],
         ephemeral: true,
       });
     }

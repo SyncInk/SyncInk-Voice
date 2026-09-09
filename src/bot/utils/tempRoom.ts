@@ -203,7 +203,7 @@ export const buildControlPanelEmbed = (
         roomOwner?.displayAvatarURL({ size: 128 }) ||
         member.user.displayAvatarURL({ size: 128 }),
     })
-    .setTitle(`${EMOJIS.MIC} Channel Management`)
+    .setTitle('🎙️ Channel Management')
     .setDescription(description)
     .setThumbnail(
       validServerAvatar ||
@@ -245,8 +245,8 @@ export const buildLookingForMembersEmbed = (
       name: member.displayName,
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
-    .setTitle(`${EMOJIS.ALERT} Looking for members`)
-    .setDescription(description)
+    .setTitle('Looking for members')
+    .setDescription(`${EMOJIS.ALERT} ${description}`)
     .addFields(
       {
         name: 'Channel',
@@ -281,10 +281,10 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
   const timestamp = Math.floor(expiresAt.getTime() / 1000);
   return new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle(`${EMOJIS.ALERT} Owner Left Voice Channel`)
+    .setTitle('⚠️ Owner Left Voice Channel')
     .setDescription(
       [
-        'The current room owner has left the voice channel.',
+        `${EMOJIS.ALERT} The current room owner has left the voice channel.`,
         '',
         `Ownership protection will expire **<t:${timestamp}:R>**.`,
         'After that time, anyone can claim the room using the button below.',
