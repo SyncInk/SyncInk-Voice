@@ -221,32 +221,36 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_lock':
-      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false }).catch(() => null);
       tempChannel.isLocked = true;
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel locked`, 'No new users can join.')], ephemeral: true });
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel locked`, 'No new users can join.')] });
 
     case 'btn_unlock':
-      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null }).catch(() => null);
       tempChannel.isLocked = false;
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel unlocked`, 'Users can freely join now.')], ephemeral: true });
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel unlocked`, 'Users can freely join now.')] });
 
     case 'btn_hide':
-      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false }).catch(() => null);
       tempChannel.isHidden = true;
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel hidden`, 'Your channel is now invisible to others.')], ephemeral: true });
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel hidden`, 'Your channel is now invisible to others.')] });
 
     case 'btn_unhide':
-      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await voiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null }).catch(() => null);
       tempChannel.isHidden = false;
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel visible`, 'Your channel is now visible to everyone.')], ephemeral: true });
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel visible`, 'Your channel is now visible to everyone.')] });
 
     case 'btn_rename': {
       if (!(await enforceFeature(tempChannel, 'rename', interaction))) return;
@@ -315,38 +319,35 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
     }
 
     case 'btn_claim_room': {
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
       if (!voiceChannel.members.has(interaction.user.id)) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Not In Voice Channel`, 'You must be inside the voice channel to use this button.')],
-          ephemeral: true,
         });
       }
 
       if (tempChannel.ownerId === interaction.user.id) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Already owner`, 'You are already the owner of this VC.')],
-          ephemeral: true,
         });
       }
 
       if (voiceChannel.members.has(tempChannel.ownerId)) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner is still here`, 'You can only claim this room after the current owner leaves.')],
-          ephemeral: true,
         });
       }
 
       const warningExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() || 0;
       if (warningExpiresAt && warningExpiresAt > Date.now()) {
         const remainingSeconds = Math.ceil((warningExpiresAt - Date.now()) / 1000);
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [
             buildRoomEmbed(
               'Ownership protection active',
               `Please wait **${remainingSeconds} seconds** before claiming this room.`,
             ),
           ],
-          ephemeral: true,
         });
       }
 
@@ -355,13 +356,11 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       }
 
       tempChannel.ownerId = interaction.user.id;
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership Claimed`, `<@${interaction.user.id}> is now the owner of this room.`)],
-        ephemeral: true,
       });
-      return;
     }
 
     default:

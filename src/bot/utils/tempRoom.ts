@@ -149,13 +149,15 @@ const buildRoomInfoLines = (tempChannel?: ITempChannel | null, voiceChannel?: Vo
   ];
 };
 
-export const buildControlPanelEmbed = (
+const getPanelMarker = (voiceChannelId: string) => `${PANEL_FOOTER_PREFIX} | ${voiceChannelId}`;
+
+export const buildControlPanelEmbeds = (
   member: GuildMember,
   dashboardUrl?: string,
   settings?: IGuildSettings | null,
   tempChannel?: ITempChannel | null,
   voiceChannel?: VoiceChannel | null,
-) => {
+): EmbedBuilder[] => {
   const roomOwner = tempChannel ? member.guild.members.cache.get(tempChannel.ownerId) ?? null : null;
   const isValidUrl = (url?: string | null) => url && (url.startsWith('http://') || url.startsWith('https://'));
 
@@ -175,14 +177,14 @@ export const buildControlPanelEmbed = (
   const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
 
   const overviewLines = [
-    `> ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
-    `> ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
-    `> ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
-    `> ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+    `${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
+    `${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
+    `${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
   ];
 
   if (tempChannel?.status) {
-    overviewLines.push(`> ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
+    overviewLines.push(`${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
   }
 
   const description = [
@@ -190,11 +192,9 @@ export const buildControlPanelEmbed = (
     '',
     '### ⚙️ Quick Control Center',
     'Use the menus below to manage permissions, room properties, or invite others.',
-    '',
-    '-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!',
   ].join('\n');
 
-  const embed = new EmbedBuilder()
+  const mainEmbed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
       name: voiceChannel?.name ? `${voiceChannel.name} • Room Controls` : 'Voice Room Control Panel',
@@ -210,18 +210,27 @@ export const buildControlPanelEmbed = (
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
     )
+    .setImage(validServerBanner || 'https://cdn.worldwide-dc.com/actions/welcome/2.gif');
+
+  const tipEmbed = new EmbedBuilder()
+    .setColor(ENV.BRAND_COLOR)
+    .setDescription('-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!')
     .setFooter({
       text: `${getPanelMarker(voiceChannel?.id || tempChannel?.channelId || '')} • SyncInk Voice`,
       iconURL: member.guild.iconURL({ size: 64 }) || undefined,
     })
     .setTimestamp();
 
-  if (validServerBanner) {
-    embed.setImage(validServerBanner);
-  }
-
-  return embed;
+  return [mainEmbed, tipEmbed];
 };
+
+export const buildControlPanelEmbed = (
+  member: GuildMember,
+  dashboardUrl?: string,
+  settings?: IGuildSettings | null,
+  tempChannel?: ITempChannel | null,
+  voiceChannel?: VoiceChannel | null,
+) => buildControlPanelEmbeds(member, dashboardUrl, settings, tempChannel, voiceChannel)[0];
 
 export const buildLookingForMembersEmbed = (
   member: GuildMember,
@@ -262,8 +271,6 @@ export const buildLookingForMembersEmbed = (
     .setFooter({ text: 'Looking for members' })
     .setTimestamp();
 };
-
-const getPanelMarker = (voiceChannelId: string) => `${PANEL_FOOTER_PREFIX} | ${voiceChannelId}`;
 
 const getPanelTargetChannel = async (voiceChannel: VoiceChannel, tempChannel: ITempChannel) => {
   const guild = voiceChannel.guild;
@@ -710,8 +717,7 @@ export const refreshRoomPanel = async (
   const recent = await textChannel.messages.fetch({ limit: 50 }).catch(() => null);
   if (recent) {
     const duplicates = recent.filter((message) => {
-      const footer = message.embeds[0]?.footer?.text || '';
-      return footer.includes(marker);
+      return message.embeds.some((embed) => embed.footer?.text?.includes(marker));
     });
 
     let first = true;
@@ -727,10 +733,10 @@ export const refreshRoomPanel = async (
     }
   }
 
-  const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
+  const panelEmbeds = buildControlPanelEmbeds(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
     content: `<@${panelOwner.id}>`,
-    embeds: [panelEmbed],
+    embeds: panelEmbeds,
     components: [...getPanelDropdowns(), ...getPanelButtons()],
     allowedMentions: { users: [panelOwner.id] },
   };

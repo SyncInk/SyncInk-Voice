@@ -183,14 +183,14 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       await clearOwnershipWarning(guild, tempChannel, 'transferred');
     }
 
+    await interaction.deferReply({ ephemeral: true }).catch(() => null);
+
     tempChannel.ownerId = interaction.user.id;
-    await tempChannel.save();
-    await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-    await interaction.reply({
+    await tempChannel.save().catch(() => null);
+    await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+    return interaction.editReply({
       embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership Claimed`, `<@${interaction.user.id}> is now the owner of this room.`)],
-      ephemeral: true,
     });
-    return;
   }
 
   if (tempChannel.ownerId !== interaction.user.id) {
@@ -221,15 +221,15 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       if (!(await enforceFeature(tempChannel, 'rename', interaction))) return;
       const gameName = getCurrentGameName(member);
       if (!gameName) {
-        await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-        await interaction.reply({
+        await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+        return interaction.reply({
           embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} No game detected`, 'I could not see a current game activity for you.')],
           ephemeral: true,
         });
-        return;
       }
 
-      await channel.setName(gameName);
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await channel.setName(gameName).catch(() => null);
       if (tempChannel.textChannelId) {
         const textChannel = guild.channels.cache.get(tempChannel.textChannelId) as TextChannel | undefined;
         if (textChannel?.isTextBased()) {
@@ -237,12 +237,10 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         }
       }
 
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel renamed`, `Name: ${gameName}`)],
-        ephemeral: true,
       });
-      return;
     }
 
     case 'opt_text': {
@@ -310,9 +308,10 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
     case 'opt_nsfw': {
       if (!(await enforceFeature(tempChannel, 'nsfw', interaction))) return;
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
       const nextValue = !tempChannel.isNsfw;
       tempChannel.isNsfw = nextValue;
-      await tempChannel.save();
+      await tempChannel.save().catch(() => null);
       await channel.setNSFW(nextValue).catch(() => null);
 
       if (tempChannel.textChannelId) {
@@ -322,17 +321,16 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         }
       }
 
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed(nextValue ? `${EMOJIS.APPROVED} NSFW enabled` : `${EMOJIS.APPROVED} NSFW disabled`)],
-        ephemeral: true,
       });
-      return;
     }
 
     case 'opt_lock': {
       if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
-      await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: false }).catch(() => null);
       
       if (channel.parent) {
         const updates = [];
@@ -348,15 +346,15 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       }
 
       tempChannel.isLocked = true;
-      await tempChannel.save();
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel locked`, 'No new users can join.')], ephemeral: true });
-      return;
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel locked`, 'No new users can join.')] });
     }
 
     case 'opt_unlock': {
       if (!(await enforceFeature(tempChannel, 'lock', interaction))) return;
-      await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await channel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null }).catch(() => null);
       
       if (channel.parent) {
         const updates = [];
@@ -372,15 +370,15 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       }
 
       tempChannel.isLocked = false;
-      await tempChannel.save();
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel unlocked`, 'Users can freely join.')], ephemeral: true });
-      return;
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel unlocked`, 'Users can freely join.')] });
     }
 
     case 'opt_hide': {
       if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
-      await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false }).catch(() => null);
       
       if (channel.parent) {
         const updates = [];
@@ -396,15 +394,15 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       }
 
       tempChannel.isHidden = true;
-      await tempChannel.save();
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel hidden`, 'Your channel is now invisible.')], ephemeral: true });
-      return;
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel hidden`, 'Your channel is now invisible.')] });
     }
 
     case 'opt_unhide': {
       if (!(await enforceFeature(tempChannel, 'ghost', interaction))) return;
-      await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await channel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null }).catch(() => null);
       
       if (channel.parent) {
         const updates = [];
@@ -420,10 +418,9 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       }
 
       tempChannel.isHidden = false;
-      await tempChannel.save();
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel visible`, 'Your channel is now visible to everyone.')], ephemeral: true });
-      return;
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel visible`, 'Your channel is now visible to everyone.')] });
     }
 
     case 'opt_permit':
@@ -446,7 +443,6 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
         .setPlaceholder(label);
 
       const row = new ActionRowBuilder<MentionableSelectMenuBuilder>().addComponents(select);
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.reply({
         embeds: [buildRoomEmbed(label)],
         components: [row],
