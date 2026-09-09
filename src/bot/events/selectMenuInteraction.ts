@@ -65,7 +65,7 @@ const showTextModal = (
   }
 
   modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-  return interaction.showModal(modal);
+  return interaction.showModal(modal).catch(() => null);
 };
 
 const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
@@ -302,7 +302,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       const actionRow2 = new ActionRowBuilder<TextInputBuilder>().addComponents(limitInput);
       modal.addComponents(actionRow1, actionRow2);
 
-      await interaction.showModal(modal);
+      await interaction.showModal(modal).catch(() => null);
       return;
     }
 

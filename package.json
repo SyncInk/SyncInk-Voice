@@ -9,7 +9,8 @@
     "build:bot": "tsc",
     "build:dashboard": "npm --prefix dashboard ci && npm --prefix dashboard run build",
     "build": "npm run build:bot && npm run build:dashboard",
-    "build:all": "npm run build"
+    "build:all": "npm run build",
+    "termux:build": "npm run build:bot"
   },
   "dependencies": {
     "cors": "^2.8.5",

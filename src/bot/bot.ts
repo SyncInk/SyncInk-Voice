@@ -23,8 +23,33 @@ export class SyncinkBot extends Client {
   }
 
   public async start() {
-    // Register events
-    this.once('ready', () => handleReady(this));
+    // Discord client error & connection resilience handlers
+    this.on('error', (error) => {
+      console.error('[Discord Error]', error);
+    });
+
+    this.on('warn', (warning) => {
+      console.warn('[Discord Warning]', warning);
+    });
+
+    this.on('shardError', (error, shardId) => {
+      console.error(`[Discord Shard ${shardId} Error]`, error);
+    });
+
+    this.on('shardDisconnect', (event, shardId) => {
+      console.warn(`[Discord Shard ${shardId}] Disconnected (code: ${event.code}). Auto-reconnecting...`);
+    });
+
+    this.on('shardReconnecting', (shardId) => {
+      console.log(`[Discord Shard ${shardId}] Reconnecting...`);
+    });
+
+    this.on('shardResume', (shardId, replayedEvents) => {
+      console.log(`[Discord Shard ${shardId}] Resumed successfully (${replayedEvents} events replayed).`);
+    });
+
+    // Register lifecycle & feature events
+    this.once('clientReady', () => handleReady(this));
     this.on('voiceStateUpdate', (oldState, newState) => handleVoiceStateUpdate(this, oldState, newState));
     this.on('interactionCreate', (interaction) => handleInteractionCreate(this, interaction));
     this.on('guildCreate', (guild) => handleGuildCreate(this, guild));

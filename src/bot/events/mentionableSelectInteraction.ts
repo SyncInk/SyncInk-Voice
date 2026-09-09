@@ -194,9 +194,9 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
     };
 
     if (interaction.replied || interaction.deferred) {
-      await interaction.editReply(payload);
+      await interaction.editReply(payload).catch(() => null);
     } else {
-      await interaction.reply({ ...payload, ephemeral: true });
+      await interaction.reply({ ...payload, ephemeral: true }).catch(() => null);
     }
   }
 };

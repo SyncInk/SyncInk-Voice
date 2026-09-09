@@ -32,22 +32,29 @@ interface AuthUser {
   avatarUrl: string;
 }
 
+import { fetchJsonWithRetry, fetchWithRetry, resolveApiUrl, setAuthToken } from './api';
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 const API = {
   async session(): Promise<AuthUser | null> {
     try {
-      const r = await fetch('/api/auth/session', { credentials: 'include' });
-      if (!r.ok) return null;
-      const d = await r.json();
-      return d.authenticated ? d.user : null;
-    } catch { return null; }
+      const res = await fetchJsonWithRetry<{ authenticated: boolean; token?: string; user: AuthUser }>('/api/auth/session');
+      if (res.ok && res.data?.authenticated && res.data.user) {
+        if (res.data.token) {
+          setAuthToken(res.data.token);
+        }
+        return res.data.user;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   },
   async guilds(): Promise<Guild[]> {
     try {
-      const r = await fetch('/api/guilds', { credentials: 'include' });
-      if (!r.ok) return [];
-      const d = await r.json();
-      return (d.guilds ?? []).map((g: { id: string; name: string; iconUrl: string | null; botConnected: boolean; permissionLevel?: string }) => ({
+      const res = await fetchJsonWithRetry<{ guilds?: Array<{ id: string; name: string; iconUrl: string | null; botConnected: boolean; permissionLevel?: string }> }>('/api/guilds');
+      if (!res.ok || !res.data) return [];
+      return (res.data.guilds ?? []).map((g) => ({
         id: g.id,
         name: g.name,
         icon: g.iconUrl ? g.iconUrl.match(/icons\/\d+\/([^.?]+)/)?.[1] ?? null : null,
@@ -56,10 +63,17 @@ const API = {
         permissionLevel: (g.permissionLevel as 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member') ?? 'Member',
         botPresent: g.botConnected,
       }));
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
   async logout() {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    try {
+      await fetchWithRetry('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore network errors on logout
+    }
+    setAuthToken(null);
   },
 };
 
@@ -158,10 +172,15 @@ export default function App() {
     });
   }, [guilds]);
 
-  // On mount, check if already logged in (cookie session)
+  // On mount, check if already logged in (cookie session or token from redirect)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const loginStatus = params.get('login');
+    const tokenFromUrl = params.get('token');
+
+    if (tokenFromUrl) {
+      setAuthToken(tokenFromUrl);
+    }
 
     API.session().then(async u => {
       if (u) {
@@ -174,12 +193,12 @@ export default function App() {
           setSelectedGuild(found || gs[0]);
         }
         if (loginStatus === 'success') {
-          // Clean URL
-          window.history.replaceState({}, '', '/');
+          // Clean URL parameters while retaining the current path
+          window.history.replaceState({}, '', window.location.pathname || '/');
           addToast('success', `Welcome back, ${u.globalName ?? u.username}! 👋`);
         }
       } else if (loginStatus === 'failed') {
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({}, '', window.location.pathname || '/');
         addToast('error', 'Login failed. Please try again.');
       }
       setLoading(false);
@@ -187,8 +206,8 @@ export default function App() {
   }, []);
 
   const handleLogin = useCallback(() => {
-    // Redirect to backend OAuth — works both locally and on Railway
-    window.location.href = '/api/auth/discord/login';
+    // Redirect to backend OAuth (handles Render, Vercel, Railway, or local)
+    window.location.href = resolveApiUrl('/api/auth/discord/login');
   }, []);
 
   const handleLogout = useCallback(async () => {

@@ -342,7 +342,9 @@ const fetchDiscordGuildsThrottled = async (accessToken: string) => {
 const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   cleanExpiredRecords();
 
-  const sessionId = getCookieValue(req, SESSION_COOKIE_NAME);
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  const sessionId = bearerToken || getCookieValue(req, SESSION_COOKIE_NAME);
   if (!sessionId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
@@ -582,24 +584,54 @@ const refreshActiveRoomPanels = async (bot: SyncinkBot, guildId: string) => {
 
 export const startApi = (bot: SyncinkBot) => {
   const app = express();
-  const allowedOrigins = new Set<string>(['http://localhost:5173', 'http://127.0.0.1:5173']);
+  const normalizeOrigin = (url?: string | null) => {
+    if (!url) return '';
+    try {
+      const parsed = new URL(url);
+      return `${parsed.protocol}//${parsed.host}`.toLowerCase();
+    } catch {
+      return url.trim().replace(/\/+$/, '').toLowerCase();
+    }
+  };
+
+  const allowedOrigins = new Set<string>([
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+  ]);
+
   if (ENV.DASHBOARD_URL) {
-    allowedOrigins.add(ENV.DASHBOARD_URL);
+    allowedOrigins.add(normalizeOrigin(ENV.DASHBOARD_URL));
   }
   if (ENV.API_BASE_URL) {
-    allowedOrigins.add(ENV.API_BASE_URL);
+    allowedOrigins.add(normalizeOrigin(ENV.API_BASE_URL));
   }
 
   app.use(
     cors({
       origin(origin, callback) {
-        if (!origin || allowedOrigins.has(origin) || (!ENV.DASHBOARD_URL && !ENV.API_BASE_URL)) {
+        if (!origin) {
           return callback(null, true);
         }
 
-        return callback(new Error('Origin not allowed by CORS'));
+        const norm = normalizeOrigin(origin);
+        if (
+          allowedOrigins.has(norm) ||
+          norm.endsWith('.vercel.app') ||
+          norm.endsWith('.onrender.com') ||
+          (!ENV.DASHBOARD_URL && !ENV.API_BASE_URL)
+        ) {
+          return callback(null, true);
+        }
+
+        return callback(null, false);
       },
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     }),
   );
   app.use(express.json({ limit: '20mb' }));
@@ -653,15 +685,29 @@ export const startApi = (bot: SyncinkBot) => {
         user,
       });
 
+      const isHttps = isHttpsUrl(stateRecord.dashboardUrl) || Boolean(req.secure) || req.headers['x-forwarded-proto'] === 'https';
+
       res.cookie(SESSION_COOKIE_NAME, sessionId, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: isHttpsUrl(stateRecord.dashboardUrl),
+        sameSite: isHttps ? 'none' : 'lax',
+        secure: isHttps,
         maxAge: SESSION_TTL_MS,
         path: '/',
       });
 
-      return res.redirect(`${stateRecord.dashboardUrl}?login=success`);
+      // Append token to redirect URL for cross-domain frontends (e.g. Vercel) where 3rd-party cookies may be restricted
+      let targetUrl = stateRecord.dashboardUrl;
+      try {
+        const parsedUrl = new URL(targetUrl);
+        parsedUrl.searchParams.set('login', 'success');
+        parsedUrl.searchParams.set('token', sessionId);
+        targetUrl = parsedUrl.toString();
+      } catch {
+        const delimiter = targetUrl.includes('?') ? '&' : '?';
+        targetUrl = `${targetUrl}${delimiter}login=success&token=${encodeURIComponent(sessionId)}`;
+      }
+
+      return res.redirect(targetUrl);
     } catch (error) {
       console.error('[API] Discord OAuth callback failed:', error);
       return res.redirect(`${fallbackDashboardUrl}?login=failed`);
@@ -670,8 +716,13 @@ export const startApi = (bot: SyncinkBot) => {
 
   app.get('/api/auth/session', requireAuth, async (req: AuthenticatedRequest, res) => {
     const session = req.session!;
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+    const sessionId = bearerToken || getCookieValue(req, SESSION_COOKIE_NAME);
+
     res.json({
       authenticated: true,
+      token: sessionId,
       user: {
         id: session.user.id,
         username: session.user.username,

@@ -262,7 +262,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
         .setRequired(true)
         .setMaxLength(100);
       modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-      return interaction.showModal(modal);
+      return interaction.showModal(modal).catch(() => null);
     }
 
     case 'btn_limit': {
@@ -274,7 +274,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
       modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-      return interaction.showModal(modal);
+      return interaction.showModal(modal).catch(() => null);
     }
 
     case 'btn_transfer': {
@@ -286,7 +286,7 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
       modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-      return interaction.showModal(modal);
+      return interaction.showModal(modal).catch(() => null);
     }
 
     case 'btn_delete': {

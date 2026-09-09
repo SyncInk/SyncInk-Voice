@@ -5,7 +5,7 @@ import {
   MessageSquare, Users, Lock, Eye, Globe, Volume2, Shield
 } from 'lucide-react';
 import { InfoBanner } from '../components/layout/InfoBanner';
-import { fetchJsonWithRetry } from '../api';
+import { fetchJsonWithRetry, fetchWithRetry } from '../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface DiscordChannel { id: string; name: string; type: number; }
@@ -300,7 +300,7 @@ const SetupModal = ({
       const url = isEdit
         ? `/api/guilds/${guildId}/setups/${initial._id}`
         : `/api/guilds/${guildId}/setups`;
-      const res = await fetch(url, {
+      const res = await fetchWithRetry(url, {
         method: isEdit ? 'PUT' : 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -665,7 +665,7 @@ export default function Setup({ guildId, permLevel, addToast }: Props) {
   const handleDelete = async () => {
     if (!deleteTarget || !guildId) return;
     try {
-      const res = await fetch(`/api/guilds/${guildId}/setups/${deleteTarget._id}`, {
+      const res = await fetchWithRetry(`/api/guilds/${guildId}/setups/${deleteTarget._id}`, {
         method: 'DELETE', credentials: 'include',
       });
       if (!res.ok) throw new Error();
@@ -679,7 +679,7 @@ export default function Setup({ guildId, permLevel, addToast }: Props) {
   const handleDuplicate = async (setup: GuildSetup) => {
     if (!guildId) return;
     try {
-      const res = await fetch(`/api/guilds/${guildId}/setups/${setup._id}/duplicate`, {
+      const res = await fetchWithRetry(`/api/guilds/${guildId}/setups/${setup._id}/duplicate`, {
         method: 'POST', credentials: 'include',
       });
       const data = await res.json();

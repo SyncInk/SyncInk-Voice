@@ -4,6 +4,25 @@ import { loadCommands } from './bot/utils/commandLoader';
 import { startApi } from './api';
 import { ENV } from './config/config';
 
+// Global process error handlers to prevent crashes on mobile (Termux) or cloud environments
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process Error] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error, origin) => {
+  console.error(`[Process Error] Uncaught Exception: ${error?.stack || error}\nOrigin: ${origin}`);
+});
+
+process.on('SIGINT', () => {
+  console.log('[Process] Received SIGINT. Gracefully shutting down...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('[Process] Received SIGTERM. Gracefully shutting down...');
+  process.exit(0);
+});
+
 const bootstrap = async () => {
   console.log('Starting Syncink Voice...');
 
@@ -24,4 +43,7 @@ const bootstrap = async () => {
   startApi(bot);
 };
 
-bootstrap().catch(console.error);
+bootstrap().catch((error) => {
+  console.error('[Bootstrap Error] Failed to start application:', error);
+});
+
