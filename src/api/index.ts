@@ -650,9 +650,13 @@ export const startApi = (bot: SyncinkBot) => {
     cleanExpiredRecords();
     const state = crypto.randomBytes(24).toString('hex');
     const requestOrigin = getRequestOrigin(req);
-    const dashboardUrl = ENV.DASHBOARD_URL || requestOrigin;
 
-    // Use current public origin if available so OAuth returns to whichever platform (Render, Railway, custom domain) the user is browsing
+    // Return user to the same host they are browsing on (Render, Railway, or custom domain)
+    const dashboardUrl = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
+      ? requestOrigin
+      : (ENV.DASHBOARD_URL || requestOrigin);
+
+    // Use current public origin if available so OAuth returns to whichever platform the user is browsing
     const baseUri = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
       ? requestOrigin
       : (ENV.API_BASE_URL || requestOrigin);
@@ -677,7 +681,8 @@ export const startApi = (bot: SyncinkBot) => {
     const state = typeof req.query.state === 'string' ? req.query.state : null;
 
     const stateRecord = state ? oauthStates.get(state) : null;
-    const fallbackDashboardUrl = ENV.DASHBOARD_URL || getRequestOrigin(req);
+    const requestOrigin = getRequestOrigin(req);
+    const fallbackDashboardUrl = stateRecord?.dashboardUrl || ((requestOrigin && !requestOrigin.includes('localhost')) ? requestOrigin : (ENV.DASHBOARD_URL || requestOrigin));
 
     if (!code || !state || !stateRecord) {
       return res.redirect(`${fallbackDashboardUrl}?login=failed`);
