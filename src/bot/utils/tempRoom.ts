@@ -162,41 +162,58 @@ export const buildControlPanelEmbed = (
   const validServerBanner = isValidUrl(settings?.serverBanner) ? settings!.serverBanner : null;
   const currentMembers = voiceChannel?.members.size ?? 0;
   const currentLimit = voiceChannel?.userLimit ?? tempChannel?.userLimit ?? 0;
-  const statusText = tempChannel ? getRoomStatusLabel(tempChannel) : 'Public';
-  const accessText = tempChannel?.isNsfw ? 'NSFW enabled' : 'NSFW disabled';
+  const isLocked = tempChannel?.isLocked ?? false;
+  const isHidden = tempChannel?.isHidden ?? false;
+  const isNsfw = tempChannel?.isNsfw ?? false;
+
+  const lockBadge = isLocked ? '🔒 `Locked`' : '🔓 `Public`';
+  const ghostBadge = isHidden ? '👻 `Ghosted`' : '👁️ `Visible`';
+  const nsfwBadge = isNsfw ? '🔞 `NSFW`' : '🛡️ `Safe`';
+  const limitBadge = currentLimit > 0 ? `\`${currentMembers} / ${currentLimit}\`` : `\`${currentMembers} / ∞\``;
+  const bitrateKbps = Math.round((voiceChannel?.bitrate || tempChannel?.bitrate || 64000) / 1000);
+  const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
+
+  const overviewLines = [
+    `> 👑 **Host:** <@${roomOwner?.id || member.id}>`,
+    `> 👥 **Members:** ${limitBadge}`,
+    `> 🛡️ **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `> 🔊 **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+  ];
+
+  if (tempChannel?.status) {
+    overviewLines.push(`> 💬 **Status:** *"${tempChannel.status}"*`);
+  }
+
+  const description = [
+    ...overviewLines,
+    '',
+    '### ⚙️ Quick Control Center',
+    'Use the menus below to manage permissions, room properties, or invite others.',
+    '',
+    '-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!',
+  ].join('\n');
 
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
-    .setTitle('Your Custom Audio Space')
-    .setDescription(
-      [
-        'Pick what you need and change it instantly through the menus below.',
-        '',
-        '──────────────────────────────',
-        '',
-        '**Room Overview**',
-        `Owner: <@${roomOwner?.id || member.id}>`,
-        `Members: **${currentMembers}${currentLimit ? ` / ${currentLimit}` : ''}**`,
-        `Status: **${statusText}**`,
-        accessText,
-        '',
-        '──────────────────────────────',
-        '',
-        '**Controls**',
-        'Use the first menu for room settings, and the second menu for permissions and access.',
-        'This panel stays synced with the dashboard, so changes show up everywhere.',
-        '',
-        '──────────────────────────────',
-        '',
-        '**Quick Setup**',
-        'Use `/setup` once in each server to set the join-to-create channel, then manage everything here.',
-      ].join('\n')
-    )
+    .setAuthor({
+      name: voiceChannel?.name ? `${voiceChannel.name} • Room Panel` : 'Voice Room Control Panel',
+      iconURL:
+        validServerAvatar ||
+        roomOwner?.displayAvatarURL({ size: 128 }) ||
+        member.user.displayAvatarURL({ size: 128 }),
+    })
+    .setTitle('🎙️ Channel Management')
+    .setDescription(description)
     .setThumbnail(
       validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
-    );
+    )
+    .setFooter({
+      text: `${getPanelMarker(voiceChannel?.id || tempChannel?.channelId || '')} • SyncInk Voice`,
+      iconURL: member.guild.iconURL({ size: 64 }) || undefined,
+    })
+    .setTimestamp();
 
   if (validServerBanner) {
     embed.setImage(validServerBanner);
