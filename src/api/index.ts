@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import fs from 'fs';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -1555,11 +1556,23 @@ export const startApi = (bot: SyncinkBot) => {
     }
   });
 
-  app.use(express.static(path.join(__dirname, '../../dashboard/dist')));
+  const dashboardDistPath = path.join(__dirname, '../../dashboard/dist');
+  const dashboardIndexPath = path.join(dashboardDistPath, 'index.html');
 
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
-  });
+  if (fs.existsSync(dashboardIndexPath)) {
+    app.use(express.static(dashboardDistPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(dashboardIndexPath);
+    });
+  } else {
+    app.get('*', (_req, res) => {
+      res.status(200).json({
+        status: 'online',
+        message: 'SyncInk Voice API is active.',
+        dashboard: ENV.DASHBOARD_URL || 'Hosted separately (e.g. Vercel)',
+      });
+    });
+  }
 
   app.listen(Number(ENV.PORT), '0.0.0.0', () => {
     console.log(`[API] Dashboard API running on port ${ENV.PORT}`);
