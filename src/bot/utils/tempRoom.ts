@@ -177,14 +177,14 @@ export const buildControlPanelEmbed = (
   const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
 
   const overviewLines = [
-    `> ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
-    `> ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
-    `> ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
-    `> ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+    `> * ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
+    `> * ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
+    `> * ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `> * ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
   ];
 
   if (tempChannel?.status) {
-    overviewLines.push(`> ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
+    overviewLines.push(`> * ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
   }
 
   const description = [
@@ -205,7 +205,7 @@ export const buildControlPanelEmbed = (
         roomOwner?.displayAvatarURL({ size: 128 }) ||
         member.user.displayAvatarURL({ size: 128 }),
     })
-    .setTitle('🎙️ Channel Management')
+    .setTitle(`${EMOJIS.MIC} Channel Management`)
     .setDescription(description)
     .setThumbnail(
       validServerAvatar ||

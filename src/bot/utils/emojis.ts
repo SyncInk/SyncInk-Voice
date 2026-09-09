@@ -3,8 +3,8 @@
  * All IDs and animation flags are pre-verified directly against Discord CDN.
  */
 export const EMOJIS = {
-  // Animated emojis (<a:name:id>)
-  MIC: '<a:mic_animation:1547274558778900611>',
+  // Microphone emoji
+  MIC: '<:mic_animation:1547274558778900611>',
   SETTINGS: '<a:settings:1547274109585588325>',
   CHECK_YES: '<a:checkyes:1547273953721057400>',
   EARTH: '<a:earth:1547273889149878465>',
@@ -29,7 +29,7 @@ export const EMOJIS = {
 
   // Raw component emoji objects for Select Menus and Buttons
   raw: {
-    mic: { id: '1547274558778900611', name: 'mic_animation', animated: true },
+    mic: { id: '1547274558778900611', name: 'mic_animation' },
     settings: { id: '1547274109585588325', name: 'settings', animated: true },
     checkyes: { id: '1547273953721057400', name: 'checkyes', animated: true },
     earth: { id: '1547273889149878465', name: 'earth', animated: true },
