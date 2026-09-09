@@ -8,6 +8,7 @@ import {
   VoiceChannel,
 } from 'discord.js';
 import { GuildSettings } from '../../database/models/GuildSettings';
+import { EMOJIS } from '../utils/emojis';
 
 export const data = new SlashCommandBuilder()
   .setName('setup')
@@ -95,10 +96,10 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     );
 
     await interaction.editReply({
-      content: `<a:approved:1520901996389990440> **Syncink Voice has been successfully configured.**\n\nUsers can now join <#${createChannel.id}> in the **${category.name}** category. Room controls will be automatically generated inside the linked text chat of each temporary room.`,
+      content: `${EMOJIS.APPROVED} **Syncink Voice has been successfully configured.**\n\nUsers can now join <#${createChannel.id}> in the **${category.name}** category. Room controls will be automatically generated inside the linked text chat of each temporary room.`,
     });
   } catch (error) {
     console.error('[Setup] Error:', error);
-    await interaction.editReply({ content: '<a:sync_alert:1518314359024124016> **Setup Failed:** Ensure the bot has `Manage Channels` and `Manage Roles` permissions.' });
+    await interaction.editReply({ content: `${EMOJIS.ALERT} **Setup Failed:** Ensure the bot has \`Manage Channels\` and \`Manage Roles\` permissions.` });
   }
 };

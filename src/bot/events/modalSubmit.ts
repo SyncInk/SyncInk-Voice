@@ -4,6 +4,7 @@ import { GuildSettings } from '../../database/models/GuildSettings';
 import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, toTextChannelName, buildLookingForMembersEmbed } from '../utils/tempRoom';
 import { sendWebhookMessage } from '../utils/webhook';
 import { ENV } from '../../config/config';
+import { EMOJIS } from '../utils/emojis';
 
 const getTempChannelFromModal = async (interaction: ModalSubmitInteraction) => {
   if (!interaction.channelId) {
@@ -23,19 +24,19 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
     return;
   }
 
+  await interaction.deferReply({ ephemeral: true }).catch(() => null);
+
   const tempChannel = await getTempChannelFromModal(interaction);
   if (!tempChannel || tempChannel.ownerId !== interaction.user.id) {
-    return interaction.reply({
-      embeds: [buildRoomEmbed('Owner only', 'Only the current room owner can use these controls.')],
-      ephemeral: true,
+    return interaction.editReply({
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner only`, 'Only the current room owner can use these controls.')],
     });
   }
 
   const channel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!channel) {
-    return interaction.reply({
-      embeds: [buildRoomEmbed('Voice channel missing') ],
-      ephemeral: true,
+    return interaction.editReply({
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Voice channel missing`, 'I could not find the voice channel for this room.')],
     });
   }
 
@@ -44,7 +45,16 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
   try {
     if (interaction.customId === 'modal_rename') {
       const newName = interaction.fields.getTextInputValue('input_name').trim().slice(0, 100);
-      await channel.setName(newName);
+      try {
+        await channel.setName(newName);
+      } catch (renameErr: any) {
+        if (renameErr?.code === 50035 || renameErr?.message?.includes('rate limit') || renameErr?.status === 429) {
+          return interaction.editReply({
+            embeds: [buildRoomEmbed(`${EMOJIS.WARNING} Rate Limited`, 'Discord limits channel renames to twice every 10 minutes. Please wait a few minutes before trying again.')],
+          });
+        }
+        throw renameErr;
+      }
 
       if (tempChannel.textChannelId) {
         const textChannel = guild.channels.cache.get(tempChannel.textChannelId) as TextChannel | undefined;
@@ -54,9 +64,8 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       }
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Room renamed', `The room is now named **${newName}**.`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Room renamed`, `The room is now named **${newName}**.`)],
       });
     }
 
@@ -75,18 +84,16 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.status = status;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Voice status updated', `Status: **${status}**`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Voice status updated`, `Status: **${status}**`)],
       });
     }
 
     if (interaction.customId === 'modal_limit') {
       const limit = Number.parseInt(interaction.fields.getTextInputValue('input_limit'), 10);
       if (Number.isNaN(limit) || limit < 0 || limit > 99) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Invalid limit', 'Limit must be between 0 and 99.')],
-          ephemeral: true,
+        return interaction.editReply({
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Invalid limit`, 'Limit must be between 0 and 99.')],
         });
       }
 
@@ -94,18 +101,16 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.userLimit = limit;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> User limit set', `The room limit is now **${limit === 0 ? 'Unlimited' : limit}**.`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} User limit set`, `The room limit is now **${limit === 0 ? 'Unlimited' : limit}**.`)],
       });
     }
 
     if (interaction.customId === 'modal_bitrate') {
       const bitrate = Number.parseInt(interaction.fields.getTextInputValue('input_bitrate'), 10);
       if (Number.isNaN(bitrate) || bitrate < 8 || bitrate > 384) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('Invalid bitrate', 'Bitrate must be between 8 and 384 kbps.')],
-          ephemeral: true,
+        return interaction.editReply({
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Invalid bitrate`, 'Bitrate must be between 8 and 384 kbps.')],
         });
       }
 
@@ -114,9 +119,8 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       tempChannel.bitrate = finalBitrate;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('Bitrate updated', `Bitrate: **${Math.round(finalBitrate / 1000)} kbps**`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Bitrate updated`, `Bitrate: **${Math.round(finalBitrate / 1000)} kbps**`)],
       });
     }
 
@@ -125,16 +129,14 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       const targetMember = guild.members.cache.get(targetId);
 
       if (!targetMember || targetMember.voice.channelId !== channel.id) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('User must be in the room', 'The new owner must already be connected to this voice channel.')],
-          ephemeral: true,
+        return interaction.editReply({
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} User must be in the room`, 'The new owner must already be connected to this voice channel.')],
         });
       }
 
       if (targetId === tempChannel.ownerId) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('<a:sync_alert:1513822294831534220> Already owner', 'You are already the owner of this room.')],
-          ephemeral: true,
+        return interaction.editReply({
+          embeds: [buildRoomEmbed(`${EMOJIS.ALERT} Already owner`, 'You are already the owner of this room.')],
         });
       }
 
@@ -142,9 +144,8 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       await tempChannel.save();
       await clearOwnershipWarning(guild, tempChannel, 'transferred').catch(() => null);
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership transferred`, `<@${targetId}> is now the owner of this room.`)],
       });
     }
 
@@ -164,12 +165,12 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       const lfmChannelId = settings?.lfmChannelId;
       
       if (!lfmChannelId) {
-        return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Error', 'LFM is not configured.')], ephemeral: true });
+        return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} LFM Error`, 'LFM is not configured.')] });
       }
 
       const lfmChannel = guild.channels.cache.get(lfmChannelId);
       if (!lfmChannel?.isTextBased()) {
-        return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Error', 'LFM channel is missing.')], ephemeral: true });
+        return interaction.editReply({ embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} LFM Error`, 'LFM channel is missing.')] });
       }
 
       const joinBtn = new ButtonBuilder()
@@ -190,9 +191,8 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
         );
         msgId = msg?.id || null;
       } catch (err) {
-        return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Error', 'Failed to send LFM message. Please check bot permissions.')],
-          ephemeral: true,
+        return interaction.editReply({
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Error`, 'Failed to send LFM message. Please check bot permissions.')],
         });
       }
 
@@ -205,16 +205,14 @@ export const handleModalSubmit = async (interaction: ModalSubmitInteraction) => 
       }
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> LFM posted', `Posted a looking-for-members message in ${lfmChannel}.`)],
-        ephemeral: true,
+      return interaction.editReply({
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} LFM posted`, `Posted a looking-for-members message in ${lfmChannel}.`)],
       });
     }
   } catch (error) {
     console.error('[Modal] Error:', error);
-    return interaction.reply({
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', 'I could not apply that change. Check my permissions and try again.')],
-      ephemeral: true,
+    return interaction.editReply({
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Action failed`, 'I could not apply that change. Check my permissions and try again.')],
     });
   }
 };

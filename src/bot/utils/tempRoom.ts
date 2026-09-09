@@ -17,6 +17,7 @@ import { GuildSetup, featuresDefault } from '../../database/models/GuildSetup';
 import { ENV } from '../../config/config';
 import { sendWebhookMessage } from './webhook';
 import { getPanelButtons, getPanelDropdowns } from './components';
+import { EMOJIS } from './emojis';
 
 const PANEL_FOOTER_PREFIX = 'SyncInk Panel';
 const ignoredPanelDeletes = new Set<string>();
@@ -71,7 +72,7 @@ export const isFeatureEnabled = async (tempChannel: ITempChannel, featureKey: ke
 export const enforceFeature = async (tempChannel: ITempChannel, featureKey: keyof typeof featuresDefault, interaction: any): Promise<boolean> => {
   const enabled = await isFeatureEnabled(tempChannel, featureKey);
   if (!enabled) {
-    const title = '<a:refused:1520914088568295564> Feature Disabled';
+    const title = `${EMOJIS.REFUSED} Feature Disabled`;
     const disabledMsg = 'This feature is currently `disabled` by the server administration.';
     if (interaction.deferred) {
       await interaction.editReply({ embeds: [buildRoomEmbed(title, disabledMsg)] });
@@ -166,22 +167,22 @@ export const buildControlPanelEmbed = (
   const isHidden = tempChannel?.isHidden ?? false;
   const isNsfw = tempChannel?.isNsfw ?? false;
 
-  const lockBadge = isLocked ? '🔒 `Locked`' : '🔓 `Public`';
-  const ghostBadge = isHidden ? '👻 `Ghosted`' : '👁️ `Visible`';
-  const nsfwBadge = isNsfw ? '🔞 `NSFW`' : '🛡️ `Safe`';
+  const lockBadge = isLocked ? `${EMOJIS.LOCKED} \`Locked\`` : `${EMOJIS.UNLOCKED} \`Public\``;
+  const ghostBadge = isHidden ? `${EMOJIS.SHIELD} \`Ghosted\`` : `${EMOJIS.SHIELD_CHECK} \`Visible\``;
+  const nsfwBadge = isNsfw ? `${EMOJIS.NSFW} \`NSFW\`` : `${EMOJIS.SFW} \`Safe\``;
   const limitBadge = currentLimit > 0 ? `\`${currentMembers} / ${currentLimit}\`` : `\`${currentMembers} / ∞\``;
   const bitrateKbps = Math.round((voiceChannel?.bitrate || tempChannel?.bitrate || 64000) / 1000);
   const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
 
   const overviewLines = [
-    `> 👑 **Host:** <@${roomOwner?.id || member.id}>`,
-    `> 👥 **Members:** ${limitBadge}`,
-    `> 🛡️ **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
-    `> 🔊 **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+    `> ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
+    `> ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
+    `> ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `> ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
   ];
 
   if (tempChannel?.status) {
-    overviewLines.push(`> 💬 **Status:** *"${tempChannel.status}"*`);
+    overviewLines.push(`> ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
   }
 
   const description = [
@@ -196,13 +197,13 @@ export const buildControlPanelEmbed = (
   const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
-      name: voiceChannel?.name ? `${voiceChannel.name} • Room Panel` : 'Voice Room Control Panel',
+      name: voiceChannel?.name ? `${voiceChannel.name} • Room Controls` : 'Voice Room Control Panel',
       iconURL:
         validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 128 }) ||
         member.user.displayAvatarURL({ size: 128 }),
     })
-    .setTitle('🎙️ Channel Management')
+    .setTitle(`${EMOJIS.MIC} Channel Management`)
     .setDescription(description)
     .setThumbnail(
       validServerAvatar ||
@@ -244,7 +245,7 @@ export const buildLookingForMembersEmbed = (
       name: member.displayName,
       iconURL: member.user.displayAvatarURL({ size: 64 }),
     })
-    .setTitle('<a:sync_alert:1518314359024124016> Looking for members')
+    .setTitle(`${EMOJIS.ALERT} Looking for members`)
     .setDescription(description)
     .addFields(
       {
@@ -280,7 +281,7 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
   const timestamp = Math.floor(expiresAt.getTime() / 1000);
   return new EmbedBuilder()
     .setColor(0xf59e0b)
-    .setTitle('<a:sync_alert:1513822294831534220> Owner Left Voice Channel')
+    .setTitle(`${EMOJIS.ALERT} Owner Left Voice Channel`)
     .setDescription(
       [
         'The current room owner has left the voice channel.',
@@ -294,14 +295,14 @@ const buildOwnerLeftWarningEmbed = (roomName: string, expiresAt: Date) => {
       value: roomName,
       inline: true,
     })
-    .setFooter({ text: 'Ownership protection timer active.', iconURL: 'https://cdn.discordapp.com/emojis/1518314359024124016.webp?size=40&animated=true' })
+    .setFooter({ text: 'Ownership protection timer active.' })
     .setTimestamp();
 };
 
 const buildOwnerReturnedEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x57f287)
-    .setDescription('**<a:sync_check_yes:1518997998128988160> Ownership protection restored**\n\nThe room owner returned in time, so ownership protection has been cancelled.')
+    .setDescription(`**${EMOJIS.CHECK_YES} Ownership protection restored**\n\nThe room owner returned in time, so ownership protection has been cancelled.`)
     .addFields({
       name: 'Room',
       value: roomName,
@@ -312,7 +313,7 @@ const buildOwnerReturnedEmbed = (roomName: string) =>
 const buildOwnershipExpiredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0xfee75c)
-    .setDescription('**<a:syncink_voice_alert:1518903037257846874> Ownership transfer available**\n\nThe 3-minute protection window expired. Ownership can now be transferred if needed.')
+    .setDescription(`**${EMOJIS.ALERT} Ownership transfer available**\n\nThe 3-minute protection window expired. Ownership can now be transferred if needed.`)
     .addFields({
       name: 'Room',
       value: roomName,
@@ -323,7 +324,7 @@ const buildOwnershipExpiredEmbed = (roomName: string) =>
 const buildOwnershipTransferredEmbed = (roomName: string) =>
   new EmbedBuilder()
     .setColor(0x8b5cf6)
-    .setDescription('**<a:sync_check_yes:1518997998128988160> Ownership transferred**\n\nRoom ownership has been handed over successfully.')
+    .setDescription(`**${EMOJIS.CHECK_YES} Ownership transferred**\n\nRoom ownership has been handed over successfully.`)
     .addFields({
       name: 'Room',
       value: roomName,

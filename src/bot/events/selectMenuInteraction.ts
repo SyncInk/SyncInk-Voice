@@ -29,6 +29,7 @@ import {
 } from '../utils/tempRoom';
 import { getPanelDropdowns, getPanelButtons } from '../utils/components';
 import { ENV } from '../../config/config';
+import { EMOJIS } from '../utils/emojis';
 
 const REGION_OPTIONS = [
   { label: 'Automatic', value: 'automatic', emoji: '🌐' },
@@ -82,7 +83,7 @@ const showRegionMenu = async (interaction: StringSelectMenuInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionMenu);
   return interaction.reply({
-    embeds: [buildRoomEmbed('<a:syncearthblurple:1519008181550842008> Select Voice Region', 'Choose a region for your voice channel. The panel will stay open.')],
+    embeds: [buildRoomEmbed(`${EMOJIS.EARTH} Select Voice Region`, 'Choose a region for your voice channel. The panel will stay open.')],
     components: [row],
     ephemeral: true,
   });
@@ -109,7 +110,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   const tempChannel = await getTempChannelFromInteraction(interaction);
   if (!tempChannel) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Temporary room not found', 'This menu is not linked to an active temporary room.')],
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Temporary room not found`, 'This menu is not linked to an active temporary room.')],
       ephemeral: true,
     });
   }
@@ -117,7 +118,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   const channel = guild.channels.cache.get(tempChannel.channelId) as VoiceChannel | undefined;
   if (!channel) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Voice channel missing', 'I could not find the voice channel for this room.')],
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Voice channel missing`, 'I could not find the voice channel for this room.')],
       ephemeral: true,
     });
   }
@@ -125,7 +126,9 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   const settings = await GuildSettings.findOne({ guildId: guild.id }).catch(() => null);
   const value = interaction.values[0];
 
-  if (interaction.customId.startsWith('menu_settings') || interaction.customId.startsWith('menu_users')) {
+  // Only edit message components if NOT showing a modal (showing a modal fails if the interaction message was updated)
+  const isModalAction = ['opt_rename', 'opt_status', 'opt_limit', 'opt_bitrate', 'opt_lfm'].includes(value);
+  if (!isModalAction && (interaction.customId.startsWith('menu_settings') || interaction.customId.startsWith('menu_users'))) {
     interaction.message.edit({ components: [...getPanelDropdowns(), ...getPanelButtons()] }).catch(() => null);
   }
 
@@ -136,7 +139,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       ? 'Automatic'
       : REGION_OPTIONS.find((option) => option.value === value)?.label || value;
     await interaction.update({
-      embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Voice region updated', `Region set to: **${label}**`)],
+      embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Voice region updated`, `Region set to: **${label}**`)],
       components: [],
     });
     return;
@@ -150,14 +153,14 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   if (value === 'opt_claim') {
     if (tempChannel.ownerId === interaction.user.id) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Already owner', 'You are already the owner of this VC.')],
+        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Already owner`, 'You are already the owner of this VC.')],
         ephemeral: true,
       });
     }
 
     if (channel.members.has(tempChannel.ownerId)) {
       return interaction.reply({
-        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Owner is still here', 'You can only claim this room after the current owner leaves.')],
+        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner is still here`, 'You can only claim this room after the current owner leaves.')],
         ephemeral: true,
       });
     }
@@ -184,7 +187,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     await tempChannel.save();
     await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
     await interaction.reply({
-      embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership Claimed', `<@${interaction.user.id}> is now the owner of this room.`)],
+      embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership Claimed`, `<@${interaction.user.id}> is now the owner of this room.`)],
       ephemeral: true,
     });
     return;
@@ -192,7 +195,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
   if (tempChannel.ownerId !== interaction.user.id) {
     return interaction.reply({
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Owner only', 'Only the current room owner can use these controls.')],
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner only`, 'Only the current room owner can use these controls.')],
       ephemeral: true,
     });
   }
@@ -220,7 +223,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       if (!gameName) {
         await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
         await interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> No game detected', 'I could not see a current game activity for you.')],
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} No game detected`, 'I could not see a current game activity for you.')],
           ephemeral: true,
         });
         return;
@@ -236,7 +239,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel renamed', `Name: ${gameName}`)],
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel renamed`, `Name: ${gameName}`)],
         ephemeral: true,
       });
       return;
@@ -248,7 +251,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       const textCh = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', getDisplayNameParts(member));
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Text chat ready', `Linked text chat: ${textCh}`)],
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Text chat ready`, `Linked text chat: ${textCh}`)],
       });
     }
 
@@ -256,7 +259,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       if (!(await enforceFeature(tempChannel, 'requestToJoin', interaction))) return;
       if (tempChannel.isLocked) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Channel Locked', 'You cannot use the LFM feature while your voice channel is locked.')],
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Channel Locked`, 'You cannot use the LFM feature while your voice channel is locked.')],
           ephemeral: true,
         });
       }
@@ -264,7 +267,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       const lfmChannelId = settings?.lfmChannelId;
       if (!lfmChannelId) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Channel Not Configured', 'The LFM feature has not been configured. Ask your server administrator to set the LFM Channel in the dashboard.')],
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} LFM Channel Not Configured`, 'The LFM feature has not been configured. Ask your server administrator to set the LFM Channel in the dashboard.')],
           ephemeral: true,
         });
       }
@@ -272,7 +275,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       const lfmChannel = guild.channels.cache.get(lfmChannelId);
       if (!lfmChannel?.isTextBased()) {
         return interaction.reply({
-          embeds: [buildRoomEmbed('<a:refused:1520901852651323593> LFM Channel Error', 'The configured LFM channel is invalid or missing. Ask your server administrator to update the settings.')],
+          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} LFM Channel Error`, 'The configured LFM channel is invalid or missing. Ask your server administrator to update the settings.')],
           ephemeral: true,
         });
       }
@@ -321,7 +324,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.reply({
-        embeds: [buildRoomEmbed(nextValue ? '<a:approved:1520901996389990440> NSFW enabled' : '<a:approved:1520901996389990440> NSFW disabled')],
+        embeds: [buildRoomEmbed(nextValue ? `${EMOJIS.APPROVED} NSFW enabled` : `${EMOJIS.APPROVED} NSFW disabled`)],
         ephemeral: true,
       });
       return;
@@ -347,7 +350,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = true;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel locked', 'No new users can join.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel locked`, 'No new users can join.')], ephemeral: true });
       return;
     }
 
@@ -371,7 +374,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isLocked = false;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel unlocked', 'Users can freely join.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel unlocked`, 'Users can freely join.')], ephemeral: true });
       return;
     }
 
@@ -395,7 +398,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isHidden = true;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel hidden', 'Your channel is now invisible.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel hidden`, 'Your channel is now invisible.')], ephemeral: true });
       return;
     }
 
@@ -419,7 +422,7 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
       tempChannel.isHidden = false;
       await tempChannel.save();
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Channel visible', 'Your channel is now visible to everyone.')], ephemeral: true });
+      await interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Channel visible`, 'Your channel is now visible to everyone.')], ephemeral: true });
       return;
     }
 
@@ -452,6 +455,6 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
     }
 
     default:
-      return interaction.reply({ embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Unknown option')], ephemeral: true });
+      return interaction.reply({ embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Unknown option`)], ephemeral: true });
   }
 };

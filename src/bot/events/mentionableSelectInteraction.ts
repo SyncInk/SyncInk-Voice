@@ -3,6 +3,7 @@ import { TempChannel } from '../../database/models/TempChannel';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { buildRoomEmbed, clearOwnershipWarning, refreshRoomPanel, enforceFeature } from '../utils/tempRoom';
 import { ENV } from '../../config/config';
+import { EMOJIS } from '../utils/emojis';
 
 const getTempChannelFromInteraction = async (interaction: MentionableSelectMenuInteraction) => {
   if (!interaction.channelId) {
@@ -63,7 +64,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         : `The room is currently unlocked, so everyone can already join. However, ${mention} has been added to the permitted list and will retain access if you lock the room later.`;
 
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Access permitted', permitMessage)],
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Access permitted`, permitMessage)],
         components: [],
       });
     }
@@ -101,7 +102,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
       await targetMember.send({
         embeds: [
           buildRoomEmbed(
-            '<:sync_invite_people:1519004773297164358> Voice room invite',
+            `${EMOJIS.INVITE} Voice room invite`,
             `<@${interaction.user.id}> invited you to join **${channel.name}**.`,
           ),
         ],
@@ -110,7 +111,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Invite created', `Invite for <@${targetId}>: ${invite.url}`)],
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Invite created`, `Invite for <@${targetId}>: ${invite.url}`)],
         components: [],
       });
     }
@@ -146,7 +147,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
         : `Even though the room is unlocked, ${mention} has been explicitly rejected and can no longer join.`;
 
       return interaction.editReply({
-        embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Access rejected', rejectMessage)],
+        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Access rejected`, rejectMessage)],
         components: [],
       });
     }
@@ -162,7 +163,7 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       if (targetId === tempChannel.ownerId) {
         return interaction.editReply({
-          embeds: [buildRoomEmbed('<a:sync_alert:1513822294831534220> Already owner', 'You are already the owner of this room.')],
+          embeds: [buildRoomEmbed(`${EMOJIS.ALERT} Already owner`, 'You are already the owner of this room.')],
           components: [],
         });
       }
@@ -180,16 +181,16 @@ export const handleMentionableSelectMenuInteraction = async (interaction: Mentio
 
       await refreshRoomPanel(channel, tempChannel, targetMember, settings, ENV.DASHBOARD_URL || undefined);
       await interaction.editReply({
-        embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Ownership transferred', `<@${targetId}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership transferred`, `<@${targetId}> is now the owner of this room.`)],
         components: [],
       });
-      await channel.send({ embeds: [buildRoomEmbed('<a:approved:1520901996389990440> New room owner', `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
+      await channel.send({ embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} New room owner`, `<@${targetId}> is now the owner of this room.`)] }).catch(() => null);
     }
   } catch (error: any) {
     console.error('[MentionableSelect] Error:', error);
     const errorMessage = error?.message || String(error);
     const payload = {
-      embeds: [buildRoomEmbed('<a:refused:1520901852651323593> Action failed', `I could not apply that change.\n**Error Details:** \`${errorMessage}\`\n\nCheck my channel permissions (\`Manage Roles\`, \`Move Members\`) and try again.`)],
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Action failed`, `I could not apply that change.\n**Error Details:** \`${errorMessage}\`\n\nCheck my channel permissions (\`Manage Roles\`, \`Move Members\`) and try again.`)],
       components: [],
     };
 
