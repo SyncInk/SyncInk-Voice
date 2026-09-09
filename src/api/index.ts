@@ -651,7 +651,14 @@ export const startApi = (bot: SyncinkBot) => {
     const state = crypto.randomBytes(24).toString('hex');
     const requestOrigin = getRequestOrigin(req);
     const dashboardUrl = ENV.DASHBOARD_URL || requestOrigin;
-    const redirectUri = `${ENV.API_BASE_URL || requestOrigin}/api/auth/discord/callback`;
+
+    // Use current public origin if available so OAuth returns to whichever platform (Render, Railway, custom domain) the user is browsing
+    const baseUri = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
+      ? requestOrigin
+      : (ENV.API_BASE_URL || requestOrigin);
+    const redirectUri = `${baseUri}/api/auth/discord/callback`;
+
+    console.log(`[OAuth] Login initiated from ${requestOrigin} | redirect_uri: ${redirectUri}`);
 
     oauthStates.set(state, {
       createdAt: Date.now(),
