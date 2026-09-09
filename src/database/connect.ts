@@ -1,27 +1,42 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
 import { ENV } from '../config/config';
 
+// Ensure standard reliable DNS servers (Google / Cloudflare) are used for SRV lookups,
+// resolving querySrv ECONNREFUSED issues on Windows, Termux, and restrictive cloud networks.
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // If setting DNS servers is restricted in certain sandbox environments, continue with defaults
+}
+
 /**
  * Sanitizes MongoDB connection URI to protect against common copy-paste and formatting errors:
- * - Trims whitespace and strips surrounding quotes ("...", '...', `...`)
- * - Fixes malformed/truncated query parameters like `?r` or `&r` (common when editing retryWrites)
+ * - Trims whitespace and strips surrounding quotes ("...", '...', `...`) or trailing angles (`>`)
+ * - Fixes malformed/truncated query parameters like `?r`, `?r>`, `&r`, `&r>` (common when editing retryWrites)
  * - Strips valueless parameters that cause mongodb driver to crash with:
  *   "URI option <X> cannot be specified with no value"
  */
 export function sanitizeMongoUri(rawUri: string): string {
-  let uri = (rawUri || '').trim().replace(/^['"`]+|['"`]+$/g, '').trim();
+  let uri = (rawUri || '').trim().replace(/^['"`<]+|['"`>]+$/g, '').trim();
   if (!uri) return uri;
+
+  // Clean trailing punctuation or brackets
+  uri = uri.replace(/[>]+$/g, '').trim();
 
   if (uri.includes('?')) {
     const [base, queryString] = uri.split('?');
     if (queryString !== undefined) {
-      const params = queryString.split('&').filter(Boolean);
+      const params = queryString
+        .split('&')
+        .map((p) => p.replace(/[>]/g, '').trim())
+        .filter(Boolean);
       const cleanedParams: string[] = [];
       let hasRetryWrites = params.some((p) => p.startsWith('retryWrites='));
 
       for (const param of params) {
         const [key, val] = param.split('=');
-        if (key === 'r') {
+        if (key === 'r' || key === 'r>') {
           if (!val) {
             if (!hasRetryWrites) {
               cleanedParams.push('retryWrites=true');
@@ -40,7 +55,14 @@ export function sanitizeMongoUri(rawUri: string): string {
         }
       }
 
-      uri = cleanedParams.length > 0 ? `${base}?${cleanedParams.join('&')}` : base;
+      if (!hasRetryWrites) {
+        cleanedParams.push('retryWrites=true');
+      }
+      if (!cleanedParams.some((p) => p.startsWith('w='))) {
+        cleanedParams.push('w=majority');
+      }
+
+      uri = `${base}?${cleanedParams.join('&')}`;
     }
   }
 
