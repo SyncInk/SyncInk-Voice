@@ -115,7 +115,7 @@ export const buildRoomEmbed = (title: string, description?: string) => {
   
   const customEmojiMatch = title.match(/^(<a?:\w+:(\d+)>)\s*(.*)/);
   if (customEmojiMatch) {
-    embed.setDescription(`**${title}**${description ? `\n\n${description}` : ''}`);
+    embed.setDescription(`## ${title}${description ? `\n\n${description}` : ''}`);
   } else {
     embed.setTitle(title);
     if (description) {
@@ -151,13 +151,13 @@ const buildRoomInfoLines = (tempChannel?: ITempChannel | null, voiceChannel?: Vo
 
 const getPanelMarker = (voiceChannelId: string) => `${PANEL_FOOTER_PREFIX} | ${voiceChannelId}`;
 
-export const buildControlPanelEmbeds = (
+export const buildControlPanelEmbed = (
   member: GuildMember,
   dashboardUrl?: string,
   settings?: IGuildSettings | null,
   tempChannel?: ITempChannel | null,
   voiceChannel?: VoiceChannel | null,
-): EmbedBuilder[] => {
+): EmbedBuilder => {
   const roomOwner = tempChannel ? member.guild.members.cache.get(tempChannel.ownerId) ?? null : null;
   const isValidUrl = (url?: string | null) => url && (url.startsWith('http://') || url.startsWith('https://'));
 
@@ -177,24 +177,28 @@ export const buildControlPanelEmbeds = (
   const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
 
   const overviewLines = [
-    `${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
-    `${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
-    `${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
-    `${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+    `## ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
+    `## ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
+    `## ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `## ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
   ];
 
   if (tempChannel?.status) {
-    overviewLines.push(`${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
+    overviewLines.push(`## ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
   }
 
   const description = [
+    `# ${EMOJIS.MIC} Channel Management`,
+    '',
     ...overviewLines,
     '',
-    '### ⚙️ Quick Control Center',
+    `### ${EMOJIS.SETTINGS} Quick Control Center`,
     'Use the menus below to manage permissions, room properties, or invite others.',
+    '',
+    '-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!',
   ].join('\n');
 
-  const mainEmbed = new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(ENV.BRAND_COLOR)
     .setAuthor({
       name: voiceChannel?.name ? `${voiceChannel.name} • Room Controls` : 'Voice Room Control Panel',
@@ -203,34 +207,29 @@ export const buildControlPanelEmbeds = (
         roomOwner?.displayAvatarURL({ size: 128 }) ||
         member.user.displayAvatarURL({ size: 128 }),
     })
-    .setTitle('🎙️ Channel Management')
     .setDescription(description)
     .setThumbnail(
       validServerAvatar ||
         roomOwner?.displayAvatarURL({ size: 256 }) ||
         member.user.displayAvatarURL({ size: 256 }),
     )
-    .setImage(validServerBanner || 'https://cdn.worldwide-dc.com/actions/welcome/2.gif');
-
-  const tipEmbed = new EmbedBuilder()
-    .setColor(ENV.BRAND_COLOR)
-    .setDescription('-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!')
+    .setImage(validServerBanner || 'https://cdn.worldwide-dc.com/actions/welcome/2.gif')
     .setFooter({
       text: `${getPanelMarker(voiceChannel?.id || tempChannel?.channelId || '')} • SyncInk Voice`,
       iconURL: member.guild.iconURL({ size: 64 }) || undefined,
     })
     .setTimestamp();
 
-  return [mainEmbed, tipEmbed];
+  return embed;
 };
 
-export const buildControlPanelEmbed = (
+export const buildControlPanelEmbeds = (
   member: GuildMember,
   dashboardUrl?: string,
   settings?: IGuildSettings | null,
   tempChannel?: ITempChannel | null,
   voiceChannel?: VoiceChannel | null,
-) => buildControlPanelEmbeds(member, dashboardUrl, settings, tempChannel, voiceChannel)[0];
+): EmbedBuilder[] => [buildControlPanelEmbed(member, dashboardUrl, settings, tempChannel, voiceChannel)];
 
 export const buildLookingForMembersEmbed = (
   member: GuildMember,
@@ -733,10 +732,10 @@ export const refreshRoomPanel = async (
     }
   }
 
-  const panelEmbeds = buildControlPanelEmbeds(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
+  const panelEmbed = buildControlPanelEmbed(panelOwner, dashboardUrl, guildSettings, tempChannel, voiceChannel);
   const payload = {
     content: `<@${panelOwner.id}>`,
-    embeds: panelEmbeds,
+    embeds: [panelEmbed],
     components: [...getPanelDropdowns(), ...getPanelButtons()],
     allowedMentions: { users: [panelOwner.id] },
   };
