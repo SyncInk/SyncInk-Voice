@@ -642,7 +642,7 @@ export const startApi = (bot: SyncinkBot) => {
     res.json({ ok: true, uptime: process.uptime() });
   });
 
-  app.get('/api/auth/discord/login', (req, res) => {
+  const handleOAuthLogin = (req: Request, res: Response) => {
     if (!ENV.CLIENT_ID || !ENV.CLIENT_SECRET) {
       return res.status(500).json({ error: 'Discord OAuth is not configured.' });
     }
@@ -660,9 +660,12 @@ export const startApi = (bot: SyncinkBot) => {
     });
 
     res.redirect(createOAuthUrl(state, redirectUri));
-  });
+  };
 
-  app.get('/api/auth/discord/callback', async (req, res) => {
+  app.get('/api/auth/login', handleOAuthLogin);
+  app.get('/api/auth/discord/login', handleOAuthLogin);
+
+  const handleOAuthCallback = async (req: Request, res: Response) => {
     const code = typeof req.query.code === 'string' ? req.query.code : null;
     const state = typeof req.query.state === 'string' ? req.query.state : null;
 
@@ -713,7 +716,10 @@ export const startApi = (bot: SyncinkBot) => {
       console.error('[API] Discord OAuth callback failed:', error);
       return res.redirect(`${fallbackDashboardUrl}?login=failed`);
     }
-  });
+  };
+
+  app.get('/api/auth/callback', handleOAuthCallback);
+  app.get('/api/auth/discord/callback', handleOAuthCallback);
 
   app.get('/api/auth/session', requireAuth, async (req: AuthenticatedRequest, res) => {
     const session = req.session!;

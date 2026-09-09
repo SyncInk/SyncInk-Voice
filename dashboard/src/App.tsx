@@ -207,7 +207,7 @@ export default function App() {
 
   const handleLogin = useCallback(() => {
     // Redirect to backend OAuth (handles Render, Vercel, Railway, or local)
-    window.location.href = resolveApiUrl('/api/auth/discord/login');
+    window.location.href = resolveApiUrl('/api/auth/login');
   }, []);
 
   const handleLogout = useCallback(async () => {
