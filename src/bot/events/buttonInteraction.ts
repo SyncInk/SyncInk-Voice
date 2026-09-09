@@ -168,31 +168,31 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
 
   switch (interaction.customId) {
     case 'btn_refresh_panel': {
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Panel refreshed', 'The control panel has been updated.')],
-        ephemeral: true,
       });
     }
 
     case 'btn_load_settings': {
-      const profile = await UserProfile.findOne({ userId: interaction.user.id });
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
+      const profile = await UserProfile.findOne({ userId: interaction.user.id }).catch(() => null);
       if (!profile || (!profile.defaultName && profile.defaultLimit === null && profile.defaultBitrate === null)) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [
             buildRoomEmbed(
               'No saved preferences yet',
               'Open the dashboard and save your personal room defaults, then use Load Settings.',
             ),
           ],
-          ephemeral: true,
         });
       }
 
       const applied: string[] = [];
       if (profile.defaultName) {
         const newName = formatRoomName(profile.defaultName, member);
-        await voiceChannel.setName(newName);
+        await voiceChannel.setName(newName).catch(() => null);
         applied.push(`Name: ${newName}`);
 
         if (tempChannel.textChannelId) {
@@ -204,23 +204,22 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
       }
 
       if (profile.defaultLimit !== null && profile.defaultLimit !== undefined) {
-        await voiceChannel.setUserLimit(profile.defaultLimit);
+        await voiceChannel.setUserLimit(profile.defaultLimit).catch(() => null);
         tempChannel.userLimit = profile.defaultLimit;
         applied.push(`Limit: ${profile.defaultLimit === 0 ? 'Unlimited' : profile.defaultLimit}`);
       }
 
       if (profile.defaultBitrate) {
         const bitrate = Math.min(voiceChannel.guild.maximumBitrate, Math.max(8_000, profile.defaultBitrate * 1_000));
-        await voiceChannel.setBitrate(bitrate);
+        await voiceChannel.setBitrate(bitrate).catch(() => null);
         tempChannel.bitrate = bitrate;
         applied.push(`Bitrate: ${Math.round(bitrate / 1000)} kbps`);
       }
 
-      await tempChannel.save();
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      return interaction.reply({
+      await tempChannel.save().catch(() => null);
+      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed(`<a:approved:1520901996389990440> Applied ${applied.length} saved settings`, applied.join('\n'))],
-        ephemeral: true,
       });
     }
 

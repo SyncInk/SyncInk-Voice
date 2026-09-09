@@ -244,13 +244,12 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
 
     case 'opt_text': {
       if (!(await enforceFeature(tempChannel, 'textChannel', interaction))) return;
+      await interaction.deferReply({ ephemeral: true }).catch(() => null);
       const textCh = await ensureRoomTextChannel(channel, tempChannel, 'Temporary voice room chat', getDisplayNameParts(member));
-      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined);
-      await interaction.reply({
+      await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      return interaction.editReply({
         embeds: [buildRoomEmbed('<a:approved:1520901996389990440> Text chat ready', `Linked text chat: ${textCh}`)],
-        ephemeral: true,
       });
-      return;
     }
 
     case 'opt_lfm': {
