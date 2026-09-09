@@ -115,7 +115,7 @@ export const buildRoomEmbed = (title: string, description?: string) => {
   
   const customEmojiMatch = title.match(/^(<a?:\w+:(\d+)>)\s*(.*)/);
   if (customEmojiMatch) {
-    embed.setDescription(`## ${title}${description ? `\n\n${description}` : ''}`);
+    embed.setDescription(`**${title}**${description ? `\n\n${description}` : ''}`);
   } else {
     embed.setTitle(title);
     if (description) {
@@ -177,22 +177,20 @@ export const buildControlPanelEmbed = (
   const regionText = voiceChannel?.rtcRegion ? voiceChannel.rtcRegion.toUpperCase() : 'AUTO';
 
   const overviewLines = [
-    `## ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
-    `## ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
-    `## ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
-    `## ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
+    `> ${EMOJIS.HOST} **Host:** <@${roomOwner?.id || member.id}>`,
+    `> ${EMOJIS.MEMBERS} **Members:** ${limitBadge}`,
+    `> ${EMOJIS.SHIELD_CHECK} **Access:** ${lockBadge} • ${ghostBadge} • ${nsfwBadge}`,
+    `> ${EMOJIS.VOLUME} **Quality:** \`${bitrateKbps} kbps\` • \`${regionText}\``,
   ];
 
   if (tempChannel?.status) {
-    overviewLines.push(`## ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
+    overviewLines.push(`> ${EMOJIS.SUGGESTION} **Topic:** *"${tempChannel.status}"*`);
   }
 
   const description = [
-    `# ${EMOJIS.MIC} Channel Management`,
-    '',
     ...overviewLines,
     '',
-    `### ${EMOJIS.SETTINGS} Quick Control Center`,
+    '### ⚙️ Quick Control Center',
     'Use the menus below to manage permissions, room properties, or invite others.',
     '',
     '-# 💡 Tip: Set your preferred defaults on the dashboard, then tap **Load Settings**!',
@@ -207,6 +205,7 @@ export const buildControlPanelEmbed = (
         roomOwner?.displayAvatarURL({ size: 128 }) ||
         member.user.displayAvatarURL({ size: 128 }),
     })
+    .setTitle('🎙️ Channel Management')
     .setDescription(description)
     .setThumbnail(
       validServerAvatar ||
