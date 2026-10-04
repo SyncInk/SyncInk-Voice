@@ -2,6 +2,7 @@ import { LogOut, ChevronDown, Shield, FileText, Menu } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LOGO_URL } from '../../api';
 
 interface TopbarProps {
   user?: { username: string; avatarUrl?: string; globalName?: string | null; id?: string };
@@ -38,7 +39,7 @@ export const Topbar = ({ user, onLogout, onMobileToggle }: TopbarProps) => {
           </button>
         )}
         <div className="topbar-mobile-brand">
-          <img src="./logo.png" alt="Syncink Voice" />
+          <img src={LOGO_URL} alt="Syncink Voice" />
           <span>Syncink Voice</span>
         </div>
       </div>

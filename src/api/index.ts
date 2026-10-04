@@ -602,6 +602,9 @@ export const startApi = (bot: SyncinkBot) => {
     'http://127.0.0.1:3000',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
+    'https://syncink.site',
+    'https://www.syncink.site',
+    'https://syncink-voice.onrender.com',
   ]);
 
   if (ENV.DASHBOARD_URL) {
@@ -1587,39 +1590,39 @@ export const startApi = (bot: SyncinkBot) => {
   const dashboardIndexPath = path.join(dashboardDistPath, 'index.html');
 
   if (fs.existsSync(dashboardIndexPath)) {
-    // Serve static assets at both /dashboard/voice and /
-    app.use('/dashboard/voice', express.static(dashboardDistPath));
-    app.use(express.static(dashboardDistPath));
+    const staticOptions = {
+      redirect: false, // CRITICAL: Never send 301 redirects for trailing slashes
+      index: false,    // Let explicit routes below serve the index.html
+      maxAge: '1d',
+    };
 
-    // Handle deep client routes for /dashboard/voice
-    app.get(['/dashboard/voice', '/dashboard/voice/*'], (_req, res) => {
+    // Serve static assets at both /dashboard/voice and root /
+    app.use('/dashboard/voice', express.static(dashboardDistPath, staticOptions));
+    app.use(express.static(dashboardDistPath, staticOptions));
+
+    const sendDashboardIndex = (_req: Request, res: Response) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(dashboardIndexPath);
-    });
+    };
 
-    // Automatically redirect root / to /dashboard/voice
-    app.get('/', (_req, res) => {
-      res.redirect('/dashboard/voice');
-    });
+    // Handle deep client routes for /dashboard/voice (with or without trailing slash)
+    app.get(['/dashboard/voice', '/dashboard/voice/', '/dashboard/voice/*'], sendDashboardIndex);
+
+    // Root route: Serve dashboard directly without redirecting (avoids reverse-proxy redirect loops)
+    app.get('/', sendDashboardIndex);
 
     // Fallback for any other page route
-    app.get('*', (_req, res) => {
-      res.sendFile(dashboardIndexPath);
-    });
+    app.get('*', sendDashboardIndex);
   } else {
-    app.get(['/dashboard/voice', '/dashboard/voice/*'], (_req, res) => {
+    const sendFallbackJson = (_req: Request, res: Response) => {
       res.status(200).json({
         status: 'online',
         message: 'SyncInk Voice API is active.',
         dashboard: ENV.DASHBOARD_URL || 'https://www.syncink.site/dashboard/voice',
       });
-    });
-    app.get('*', (_req, res) => {
-      res.status(200).json({
-        status: 'online',
-        message: 'SyncInk Voice API is active.',
-        dashboard: ENV.DASHBOARD_URL || 'https://www.syncink.site/dashboard/voice',
-      });
-    });
+    };
+    app.get(['/dashboard/voice', '/dashboard/voice/', '/dashboard/voice/*'], sendFallbackJson);
+    app.get('*', sendFallbackJson);
   }
 
   app.listen(Number(ENV.PORT), '0.0.0.0', () => {

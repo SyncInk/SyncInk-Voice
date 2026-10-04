@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Mic2, Settings, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { LOGO_URL } from '../api';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -25,7 +26,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        <img src="/logo.png" className="login-logo" alt="Syncink Voice"
+        <img src={LOGO_URL} className="login-logo" alt="Syncink Voice"
           onError={e => { e.currentTarget.style.display = 'none'; }} />
 
         <h1 className="login-title">Syncink Voice</h1>

@@ -32,7 +32,7 @@ interface AuthUser {
   avatarUrl: string;
 }
 
-import { fetchJsonWithRetry, fetchWithRetry, resolveApiUrl, setAuthToken } from './api';
+import { fetchJsonWithRetry, fetchWithRetry, resolveApiUrl, setAuthToken, LOGO_URL } from './api';
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 const API = {
@@ -247,7 +247,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
         <div style={{ textAlign: 'center' }}>
-          <img src="./logo.png" alt="Syncink Voice" style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 16, opacity: 0.9 }} />
+          <img src={LOGO_URL} alt="Syncink Voice" style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 16, opacity: 0.9 }} />
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</div>
         </div>
       </div>

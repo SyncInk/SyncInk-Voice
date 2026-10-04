@@ -6,6 +6,7 @@ import {
   Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight, X
 } from 'lucide-react';
 import type { Guild } from '../../types';
+import { LOGO_URL } from '../../api';
 
 interface SidebarProps {
   guilds: Guild[];
@@ -138,7 +139,7 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild, mobileOpen, onMo
   return (
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-logo">
-        <img src="./logo.png" alt="Syncink Voice" />
+        <img src={LOGO_URL} alt="Syncink Voice" />
         <span className="sidebar-logo-text">Syncink Voice</span>
         {onMobileClose && (
           <button 

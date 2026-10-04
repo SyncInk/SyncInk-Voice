@@ -14,6 +14,18 @@ export const resolveApiUrl = (endpoint: string): string => {
   }
   return cleanEndpoint;
 };
+export const resolveAssetUrl = (assetPath: string): string => {
+  if (assetPath.startsWith('http://') || assetPath.startsWith('https://')) {
+    return assetPath;
+  }
+  const cleanPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard/voice')) {
+    return `/dashboard/voice${cleanPath}`;
+  }
+  return cleanPath;
+};
+
+export const LOGO_URL = resolveAssetUrl('/logo.png');
 
 export const getAuthToken = (): string | null => {
   try {
