@@ -6,7 +6,13 @@ export const resolveApiUrl = (endpoint: string): string => {
     return endpoint;
   }
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return API_BASE ? `${API_BASE}${cleanEndpoint}` : cleanEndpoint;
+  if (API_BASE) {
+    return `${API_BASE}${cleanEndpoint}`;
+  }
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard/voice')) {
+    return `/dashboard/voice${cleanEndpoint}`;
+  }
+  return cleanEndpoint;
 };
 
 export const getAuthToken = (): string | null => {
