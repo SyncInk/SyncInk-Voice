@@ -1,4 +1,4 @@
-import { LogOut, ChevronDown, Shield, FileText } from 'lucide-react';
+import { LogOut, ChevronDown, Shield, FileText, Menu } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,9 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface TopbarProps {
   user?: { username: string; avatarUrl?: string; globalName?: string | null; id?: string };
   onLogout?: () => void;
+  onMobileToggle?: () => void;
 }
 
-export const Topbar = ({ user, onLogout }: TopbarProps) => {
+export const Topbar = ({ user, onLogout, onMobileToggle }: TopbarProps) => {
   const displayName = user?.globalName || user?.username || 'User';
   const [legalOpen, setLegalOpen] = useState(false);
   const legalRef = useRef<HTMLDivElement>(null);
@@ -25,6 +26,23 @@ export const Topbar = ({ user, onLogout }: TopbarProps) => {
 
   return (
     <header className="topbar">
+      <div className="topbar-left">
+        {onMobileToggle && (
+          <button 
+            type="button"
+            className="mobile-menu-btn" 
+            onClick={onMobileToggle} 
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={18} />
+          </button>
+        )}
+        <div className="topbar-mobile-brand">
+          <img src="./logo.png" alt="Syncink Voice" />
+          <span>Syncink Voice</span>
+        </div>
+      </div>
+
       <nav className="topbar-nav">
         <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
         <NavLink to="/faq" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>FAQ</NavLink>

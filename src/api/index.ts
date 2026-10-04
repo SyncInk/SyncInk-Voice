@@ -638,6 +638,14 @@ export const startApi = (bot: SyncinkBot) => {
   app.use(express.json({ limit: '20mb' }));
   app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
+  // Transparently alias /dashboard/voice/api/* calls to /api/*
+  app.use((req, _res, next) => {
+    if (req.url.startsWith('/dashboard/voice/api/')) {
+      req.url = req.url.replace('/dashboard/voice/api/', '/api/');
+    }
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, uptime: process.uptime() });
   });
@@ -651,10 +659,11 @@ export const startApi = (bot: SyncinkBot) => {
     const state = crypto.randomBytes(24).toString('hex');
     const requestOrigin = getRequestOrigin(req);
 
-    // Return user to the same host they are browsing on (Render, Railway, or custom domain)
-    const dashboardUrl = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
-      ? requestOrigin
-      : (ENV.DASHBOARD_URL || requestOrigin);
+    // Return user to /dashboard/voice (or custom configured DASHBOARD_URL)
+    const targetDashboard = requestOrigin.includes('syncink.site')
+      ? 'https://www.syncink.site/dashboard/voice'
+      : `${requestOrigin}/dashboard/voice`;
+    const dashboardUrl = ENV.DASHBOARD_URL || targetDashboard;
 
     // Use current public origin if available so OAuth returns to whichever platform the user is browsing
     const baseUri = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
@@ -1578,16 +1587,37 @@ export const startApi = (bot: SyncinkBot) => {
   const dashboardIndexPath = path.join(dashboardDistPath, 'index.html');
 
   if (fs.existsSync(dashboardIndexPath)) {
+    // Serve static assets at both /dashboard/voice and /
+    app.use('/dashboard/voice', express.static(dashboardDistPath));
     app.use(express.static(dashboardDistPath));
+
+    // Handle deep client routes for /dashboard/voice
+    app.get(['/dashboard/voice', '/dashboard/voice/*'], (_req, res) => {
+      res.sendFile(dashboardIndexPath);
+    });
+
+    // Automatically redirect root / to /dashboard/voice
+    app.get('/', (_req, res) => {
+      res.redirect('/dashboard/voice');
+    });
+
+    // Fallback for any other page route
     app.get('*', (_req, res) => {
       res.sendFile(dashboardIndexPath);
     });
   } else {
+    app.get(['/dashboard/voice', '/dashboard/voice/*'], (_req, res) => {
+      res.status(200).json({
+        status: 'online',
+        message: 'SyncInk Voice API is active.',
+        dashboard: ENV.DASHBOARD_URL || 'https://www.syncink.site/dashboard/voice',
+      });
+    });
     app.get('*', (_req, res) => {
       res.status(200).json({
         status: 'online',
         message: 'SyncInk Voice API is active.',
-        dashboard: ENV.DASHBOARD_URL || 'Hosted separately (e.g. Vercel)',
+        dashboard: ENV.DASHBOARD_URL || 'https://www.syncink.site/dashboard/voice',
       });
     });
   }

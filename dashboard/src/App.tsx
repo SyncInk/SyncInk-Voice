@@ -105,6 +105,15 @@ function PublicLayout({ children, user, onLogout }: { children: React.ReactNode;
   );
 }
 
+const getBasename = () => {
+  if (typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/dashboard/voice')) {
+      return '/dashboard/voice';
+    }
+  }
+  return '';
+};
+
 function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout, addToast }: {
   user: AuthUser;
   guilds: Guild[];
@@ -114,25 +123,40 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
   addToast: (type: 'success' | 'error' | 'warning' | 'info', msg: string) => void;
 }) {
   const permLevel = (selectedGuild?.permissionLevel as PermLevel) ?? 'Member';
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="app-layout">
-      <Sidebar guilds={guilds} selectedGuild={selectedGuild} onSelectGuild={onSelectGuild} />
+      <div 
+        className={`sidebar-backdrop ${mobileOpen ? 'visible' : ''}`} 
+        onClick={() => setMobileOpen(false)} 
+        aria-hidden="true"
+      />
+      <Sidebar 
+        guilds={guilds} 
+        selectedGuild={selectedGuild} 
+        onSelectGuild={(g) => {
+          onSelectGuild(g);
+          setMobileOpen(false);
+        }}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
       <div className="main-content">
-        <Topbar user={user} onLogout={onLogout} />
+        <Topbar user={user} onLogout={onLogout} onMobileToggle={() => setMobileOpen(o => !o)} />
         <AnimatePresence mode="wait">
           <Routes key={selectedGuild?.id || 'empty'}>
-            <Route path="/" element={<motion.div key="home" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Home guildName={selectedGuild?.name ?? 'your server'} permLevel={permLevel} /></motion.div>} />
-            <Route path="/setup" element={<ProtectedRoute path="/setup" permLevel={permLevel}><motion.div key="setup" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Setup guildId={selectedGuild?.id ?? null} permLevel={permLevel} addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/server-toggles" element={<ProtectedRoute path="/server-toggles" permLevel={permLevel}><motion.div key="st" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><ServerToggles addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/role-toggles" element={<ProtectedRoute path="/role-toggles" permLevel={permLevel}><motion.div key="rt" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><RoleToggles guildId={selectedGuild?.id ?? null} permLevel={permLevel} addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/misc" element={<ProtectedRoute path="/misc" permLevel={permLevel}><motion.div key="misc" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Misc guildId={selectedGuild?.id ?? null} addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/bot-profile" element={<ProtectedRoute path="/bot-profile" permLevel={permLevel}><motion.div key="bp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><BotProfile guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/global-profile" element={<ProtectedRoute path="/global-profile" permLevel={permLevel}><motion.div key="gp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><GlobalProfile addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/access" element={<ProtectedRoute path="/access" permLevel={permLevel}><motion.div key="access" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><AccessManager guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/interface" element={<ProtectedRoute path="/interface" permLevel={permLevel}><motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Interface addToast={addToast} /></motion.div></ProtectedRoute>} />
-            <Route path="/invite" element={<ProtectedRoute path="/invite" permLevel={permLevel}><motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><InviteBot /></motion.div></ProtectedRoute>} />
-            <Route path="/guide" element={<ProtectedRoute path="/guide" permLevel={permLevel}><motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div></ProtectedRoute>} />
+            <Route path="/" element={<motion.div key="home" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Home guildName={selectedGuild?.name ?? 'your server'} permLevel={permLevel} /></motion.div>} />
+            <Route path="/setup" element={<ProtectedRoute path="/setup" permLevel={permLevel}><motion.div key="setup" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Setup guildId={selectedGuild?.id ?? null} permLevel={permLevel} addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/server-toggles" element={<ProtectedRoute path="/server-toggles" permLevel={permLevel}><motion.div key="st" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><ServerToggles addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/role-toggles" element={<ProtectedRoute path="/role-toggles" permLevel={permLevel}><motion.div key="rt" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><RoleToggles guildId={selectedGuild?.id ?? null} permLevel={permLevel} addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/misc" element={<ProtectedRoute path="/misc" permLevel={permLevel}><motion.div key="misc" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Misc guildId={selectedGuild?.id ?? null} addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/bot-profile" element={<ProtectedRoute path="/bot-profile" permLevel={permLevel}><motion.div key="bp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><BotProfile guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/global-profile" element={<ProtectedRoute path="/global-profile" permLevel={permLevel}><motion.div key="gp" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><GlobalProfile addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/access" element={<ProtectedRoute path="/access" permLevel={permLevel}><motion.div key="access" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><AccessManager guildId={selectedGuild?.id ?? null} permissionLevel={selectedGuild?.permissionLevel ?? 'Member'} addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/interface" element={<ProtectedRoute path="/interface" permLevel={permLevel}><motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Interface addToast={addToast} /></motion.div></ProtectedRoute>} />
+            <Route path="/invite" element={<ProtectedRoute path="/invite" permLevel={permLevel}><motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><InviteBot /></motion.div></ProtectedRoute>} />
+            <Route path="/guide" element={<ProtectedRoute path="/guide" permLevel={permLevel}><motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Guide /></motion.div></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
@@ -223,7 +247,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
         <div style={{ textAlign: 'center' }}>
-          <img src="/logo.png" alt="Syncink Voice" style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 16, opacity: 0.9 }} />
+          <img src="./logo.png" alt="Syncink Voice" style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 16, opacity: 0.9 }} />
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</div>
         </div>
       </div>
@@ -231,7 +255,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={getBasename()}>
       <Routes>
         <Route path="/privacy" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Privacy /></motion.div></PublicLayout>} />
         <Route path="/terms" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Terms /></motion.div></PublicLayout>} />

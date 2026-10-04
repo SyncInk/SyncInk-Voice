@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, User, Globe,
   Monitor, BookOpen, ChevronDown, Mic2,
-  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight
+  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight, X
 } from 'lucide-react';
 import type { Guild } from '../../types';
 
@@ -11,6 +11,8 @@ interface SidebarProps {
   guilds: Guild[];
   selectedGuild: Guild | null;
   onSelectGuild: (g: Guild) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 export type PermLevel = 'Developer' | 'Owner' | 'Administrator' | 'Moderator' | 'Staff' | 'Member';
@@ -86,8 +88,8 @@ export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
 };
 
 const NavItem = ({
-  to, icon, label, permLevel,
-}: { to: string; icon: React.ReactNode; label: string; permLevel: PermLevel }) => {
+  to, icon, label, permLevel, onClick,
+}: { to: string; icon: React.ReactNode; label: string; permLevel: PermLevel; onClick?: () => void }) => {
   const allowed = NAV_ACCESS[to]?.[permLevel] ?? false;
 
   if (!allowed) {
@@ -114,13 +116,17 @@ const NavItem = ({
   }
 
   return (
-    <NavLink to={to} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+    <NavLink 
+      to={to} 
+      onClick={onClick}
+      className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+    >
       {icon} {label}
     </NavLink>
   );
 };
 
-export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) => {
+export const Sidebar = ({ guilds, selectedGuild, onSelectGuild, mobileOpen, onMobileClose }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [legalOpen, setLegalOpen] = useState(false);
@@ -130,10 +136,20 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
   const iconUrl = (g: Guild) => g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=64` : null;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-logo">
-        <img src="/logo.png" alt="Syncink Voice" />
+        <img src="./logo.png" alt="Syncink Voice" />
         <span className="sidebar-logo-text">Syncink Voice</span>
+        {onMobileClose && (
+          <button 
+            type="button" 
+            className="sidebar-close-btn" 
+            onClick={onMobileClose} 
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Server Selector */}
@@ -189,13 +205,13 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
       {/* Server Settings Nav */}
       <div className="sidebar-section">
         <div className="sidebar-section-title">Server Settings</div>
-        <NavItem to="/setup"          icon={<Settings    size={16} />} label="Setup"          permLevel={permLevel} />
-        <NavItem to="/server-toggles" icon={<ToggleLeft  size={16} />} label="Server Toggles" permLevel={permLevel} />
-        <NavItem to="/role-toggles"   icon={<Shield      size={16} />} label="Role Toggles"   permLevel={permLevel} />
-        <NavItem to="/access"         icon={<Lock        size={16} />} label="Dashboard Access" permLevel={permLevel} />
-        <NavItem to="/misc"           icon={<Wrench      size={16} />} label="Miscellaneous"  permLevel={permLevel} />
-        <NavItem to="/bot-profile"    icon={<User        size={16} />} label="Bot Profile"     permLevel={permLevel} />
-        <NavItem to="/interface"      icon={<Monitor     size={16} />} label="Interface"       permLevel={permLevel} />
+        <NavItem to="/setup"          icon={<Settings    size={16} />} label="Setup"          permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/server-toggles" icon={<ToggleLeft  size={16} />} label="Server Toggles" permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/role-toggles"   icon={<Shield      size={16} />} label="Role Toggles"   permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/access"         icon={<Lock        size={16} />} label="Dashboard Access" permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/misc"           icon={<Wrench      size={16} />} label="Miscellaneous"  permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/bot-profile"    icon={<User        size={16} />} label="Bot Profile"     permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/interface"      icon={<Monitor     size={16} />} label="Interface"       permLevel={permLevel} onClick={onMobileClose} />
       </div>
 
       <div className="sidebar-divider" />
@@ -203,7 +219,7 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
       {/* Personal Settings Nav */}
       <div className="sidebar-section">
         <div className="sidebar-section-title">Personal Settings</div>
-        <NavItem to="/global-profile" icon={<Globe size={16} />} label="Global Profile" permLevel={permLevel} />
+        <NavItem to="/global-profile" icon={<Globe size={16} />} label="Global Profile" permLevel={permLevel} onClick={onMobileClose} />
         <span className="nav-item coming-soon">
           <User size={16} /> Server Profiles <span className="tag tag-purple" style={{ fontSize: 9, padding: '1px 6px' }}>Soon</span>
         </span>
@@ -213,9 +229,9 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
 
       <div className="sidebar-section">
         <div className="sidebar-section-title">Help & Resources</div>
-        <NavItem to="/faq" icon={<HelpCircle size={16} />} label="FAQ" permLevel={permLevel} />
-        <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} />
-        <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} />
+        <NavItem to="/faq" icon={<HelpCircle size={16} />} label="FAQ" permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} onClick={onMobileClose} />
         
         <div 
           onClick={() => setLegalOpen(!legalOpen)}
@@ -247,8 +263,8 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild }: SidebarProps) 
         
         {legalOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginLeft: 12, paddingLeft: 12, borderLeft: '1px solid var(--border)', marginTop: 4, marginBottom: 4 }}>
-            <NavItem to="/privacy" icon={<Shield size={14} />} label="Privacy Policy" permLevel={permLevel} />
-            <NavItem to="/terms" icon={<FileText size={14} />} label="Terms of Service" permLevel={permLevel} />
+            <NavItem to="/privacy" icon={<Shield size={14} />} label="Privacy Policy" permLevel={permLevel} onClick={onMobileClose} />
+            <NavItem to="/terms" icon={<FileText size={14} />} label="Terms of Service" permLevel={permLevel} onClick={onMobileClose} />
           </div>
         )}
       </div>
