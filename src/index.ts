@@ -41,6 +41,23 @@ const bootstrap = async () => {
 
   // 3. Start Dashboard API
   startApi(bot);
+
+  // 4. Automated 24/7 Keep-Alive (Prevents Render from sleeping after 15m)
+  const KEEP_ALIVE_URL = process.env.KEEP_ALIVE_URL || 'https://syncink-voice.onrender.com/api/health';
+  const KEEP_ALIVE_MS = 8 * 60 * 1000; // 8 minutes
+
+  const sendKeepAlivePing = async () => {
+    try {
+      await fetch(KEEP_ALIVE_URL, {
+        headers: { 'User-Agent': 'SyncInk-Voice-KeepAlive/1.0' },
+      });
+    } catch {
+      // Best effort keep-alive
+    }
+  };
+
+  setTimeout(sendKeepAlivePing, 30 * 1000);
+  setInterval(sendKeepAlivePing, KEEP_ALIVE_MS);
 };
 
 bootstrap().catch((error) => {

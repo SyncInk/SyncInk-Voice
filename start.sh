@@ -84,6 +84,9 @@ while true; do
   while kill -0 "$BOT_PID" 2>/dev/null; do
     sleep "$POLL_INTERVAL"
 
+    # Keep-alive ping to Render to ensure cloud dashboard never sleeps
+    curl -s -m 5 "https://syncink-voice.onrender.com/api/health" >/dev/null 2>&1 &
+
     if check_and_update; then
       echo -e "\033[1;33m[Server]\033[0m Restarting bot for new update..."
       kill "$BOT_PID" 2>/dev/null
