@@ -45,7 +45,7 @@ export const Topbar = ({ user, onLogout, onMobileToggle }: TopbarProps) => {
       </div>
 
       <nav className="topbar-nav">
-        <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
+        <a href="https://discord.gg/rB6gNZaK9u" target="_blank" rel="noopener noreferrer" className="topbar-link">Support</a>
         <NavLink to="/faq" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>FAQ</NavLink>
         
         <div className="topbar-dropdown" ref={legalRef} style={{ position: 'relative' }}>

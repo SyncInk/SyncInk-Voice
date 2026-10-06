@@ -9,7 +9,7 @@ export const InfoBanner = ({ message }: { message: string }) => {
       <Info size={15} />
       <span>
         {message}{' '}
-        <a href="https://discord.gg/uuVzD5ky4y" target="_blank" rel="noopener noreferrer">
+        <a href="https://discord.gg/rB6gNZaK9u" target="_blank" rel="noopener noreferrer">
           Contact Support
         </a>
         {' '}or send us a message with your issue.
