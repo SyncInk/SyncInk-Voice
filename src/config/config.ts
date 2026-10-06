@@ -8,6 +8,8 @@ export const ENV = {
   MONGO_URI: process.env.MONGO_URI || process.env.MANGO_URL || 'mongodb://localhost:27017/syncink',
   PORT: process.env.PORT || 3000,
   API_BASE_URL: process.env.API_BASE_URL || '',
-  DASHBOARD_URL: process.env.DASHBOARD_URL || 'https://www.syncink.site/dashboard/voice',
+  DASHBOARD_URL: (process.env.DASHBOARD_URL && !process.env.DASHBOARD_URL.includes('onrender.com'))
+    ? process.env.DASHBOARD_URL
+    : 'https://www.syncink.site/dashboard/voice',
   BRAND_COLOR: parseInt(process.env.BRAND_COLOR || '8B5CF6', 16),
 };

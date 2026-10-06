@@ -173,6 +173,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
 
+  // Hard guarantee: if ever opened directly on onrender.com, immediately redirect to official custom domain
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.endsWith('.onrender.com')) {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      window.location.replace(`https://www.syncink.site/dashboard/voice${search}${hash}`);
+    }
+  }, []);
+
   // Apply saved interface preferences (theme/compact/animations) immediately
   useEffect(() => {
     try {
@@ -218,11 +227,17 @@ export default function App() {
         }
         if (loginStatus === 'success') {
           // Clean URL parameters while retaining the current path
-          window.history.replaceState({}, '', window.location.pathname || '/');
+          const cleanPath = (window.location.pathname && window.location.pathname.startsWith('/dashboard/voice'))
+            ? window.location.pathname
+            : '/dashboard/voice';
+          window.history.replaceState({}, '', cleanPath);
           addToast('success', `Welcome back, ${u.globalName ?? u.username}! 👋`);
         }
       } else if (loginStatus === 'failed') {
-        window.history.replaceState({}, '', window.location.pathname || '/');
+        const cleanPath = (window.location.pathname && window.location.pathname.startsWith('/dashboard/voice'))
+          ? window.location.pathname
+          : '/dashboard/voice';
+        window.history.replaceState({}, '', cleanPath);
         addToast('error', 'Login failed. Please try again.');
       }
       setLoading(false);
@@ -230,8 +245,11 @@ export default function App() {
   }, []);
 
   const handleLogin = useCallback(() => {
-    // Redirect to backend OAuth (handles Render, Vercel, Railway, or local)
-    window.location.href = resolveApiUrl('/api/auth/login');
+    // Preserve current website origin and subpath for post-login redirect
+    const returnUrl = (typeof window !== 'undefined' && window.location.origin)
+      ? `${window.location.origin}/dashboard/voice`
+      : 'https://www.syncink.site/dashboard/voice';
+    window.location.href = resolveApiUrl(`/api/auth/login?return_to=${encodeURIComponent(returnUrl)}`);
   }, []);
 
   const handleLogout = useCallback(async () => {

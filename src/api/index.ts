@@ -61,10 +61,16 @@ const getRequestOrigin = (req: Request) => {
     ? forwardedProtoHeader[0]
     : forwardedProtoHeader?.split(',')[0];
   const protocol = forwardedProto?.trim() || req.protocol || 'http';
-  const host = req.headers.host;
+
+  const forwardedHostHeader = req.headers['x-forwarded-host'];
+  const forwardedHost = Array.isArray(forwardedHostHeader)
+    ? forwardedHostHeader[0]
+    : forwardedHostHeader?.split(',')[0];
+
+  const host = forwardedHost?.trim() || req.headers.host;
 
   if (!host) {
-    return ENV.API_BASE_URL || ENV.DASHBOARD_URL || `http://localhost:${ENV.PORT}`;
+    return 'https://www.syncink.site';
   }
 
   return `${protocol}://${host}`;
@@ -662,19 +668,43 @@ export const startApi = (bot: SyncinkBot) => {
     const state = crypto.randomBytes(24).toString('hex');
     const requestOrigin = getRequestOrigin(req);
 
-    // Return user to /dashboard/voice (or custom configured DASHBOARD_URL)
-    const targetDashboard = requestOrigin.includes('syncink.site')
-      ? 'https://www.syncink.site/dashboard/voice'
-      : `${requestOrigin}/dashboard/voice`;
-    const dashboardUrl = ENV.DASHBOARD_URL || targetDashboard;
+    // Accept explicit return_to from frontend or referer
+    const returnToQuery = typeof req.query.return_to === 'string' ? req.query.return_to.trim() : null;
+    const referer = typeof req.headers.referer === 'string' ? req.headers.referer.trim() : null;
 
-    // Use current public origin if available so OAuth returns to whichever platform the user is browsing
-    const baseUri = (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
-      ? requestOrigin
-      : (ENV.API_BASE_URL || requestOrigin);
-    const redirectUri = `${baseUri}/api/auth/discord/callback`;
+    let dashboardUrl = 'https://www.syncink.site/dashboard/voice';
 
-    console.log(`[OAuth] Login initiated from ${requestOrigin} | redirect_uri: ${redirectUri}`);
+    if (returnToQuery && (returnToQuery.includes('syncink.site') || returnToQuery.includes('localhost') || returnToQuery.includes('127.0.0.1'))) {
+      dashboardUrl = returnToQuery;
+    } else if (referer && (referer.includes('syncink.site') || referer.includes('localhost') || referer.includes('127.0.0.1'))) {
+      try {
+        const parsed = new URL(referer);
+        dashboardUrl = `${parsed.origin}/dashboard/voice`;
+      } catch {
+        dashboardUrl = 'https://www.syncink.site/dashboard/voice';
+      }
+    } else if (requestOrigin.includes('localhost') || requestOrigin.includes('127.0.0.1')) {
+      dashboardUrl = `${requestOrigin}/dashboard/voice`;
+    } else if (ENV.DASHBOARD_URL && !ENV.DASHBOARD_URL.includes('onrender.com')) {
+      dashboardUrl = ENV.DASHBOARD_URL;
+    } else {
+      dashboardUrl = 'https://www.syncink.site/dashboard/voice';
+    }
+
+    // ABSOLUTE RULE: In production, dashboardUrl must NEVER point to onrender.com
+    if (dashboardUrl.includes('onrender.com')) {
+      dashboardUrl = 'https://www.syncink.site/dashboard/voice';
+    }
+
+    // Discord OAuth redirect_uri
+    const baseUri = (process.env.DISCORD_REDIRECT_URI)
+      ? process.env.DISCORD_REDIRECT_URI.replace(/\/api\/auth\/discord\/callback$/, '')
+      : ((requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
+        ? requestOrigin
+        : (ENV.API_BASE_URL || requestOrigin));
+    const redirectUri = process.env.DISCORD_REDIRECT_URI || `${baseUri}/api/auth/discord/callback`;
+
+    console.log(`[OAuth] Login initiated. Return destination: ${dashboardUrl} | redirect_uri: ${redirectUri}`);
 
     oauthStates.set(state, {
       createdAt: Date.now(),
@@ -694,7 +724,13 @@ export const startApi = (bot: SyncinkBot) => {
 
     const stateRecord = state ? oauthStates.get(state) : null;
     const requestOrigin = getRequestOrigin(req);
-    const fallbackDashboardUrl = stateRecord?.dashboardUrl || ((requestOrigin && !requestOrigin.includes('localhost')) ? requestOrigin : (ENV.DASHBOARD_URL || requestOrigin));
+
+    let fallbackDashboardUrl = 'https://www.syncink.site/dashboard/voice';
+    if (stateRecord?.dashboardUrl && !stateRecord.dashboardUrl.includes('onrender.com')) {
+      fallbackDashboardUrl = stateRecord.dashboardUrl;
+    } else if (requestOrigin.includes('localhost') || requestOrigin.includes('127.0.0.1')) {
+      fallbackDashboardUrl = `${requestOrigin}/dashboard/voice`;
+    }
 
     if (!code || !state || !stateRecord) {
       return res.redirect(`${fallbackDashboardUrl}?login=failed`);
@@ -713,7 +749,13 @@ export const startApi = (bot: SyncinkBot) => {
         user,
       });
 
-      const isHttps = isHttpsUrl(stateRecord.dashboardUrl) || Boolean(req.secure) || req.headers['x-forwarded-proto'] === 'https';
+      // Target URL to send the user back to - NEVER allow onrender.com
+      let targetUrl = stateRecord.dashboardUrl || 'https://www.syncink.site/dashboard/voice';
+      if (targetUrl.includes('onrender.com')) {
+        targetUrl = 'https://www.syncink.site/dashboard/voice';
+      }
+
+      const isHttps = isHttpsUrl(targetUrl) || Boolean(req.secure) || req.headers['x-forwarded-proto'] === 'https';
 
       res.cookie(SESSION_COOKIE_NAME, sessionId, {
         httpOnly: true,
@@ -724,7 +766,6 @@ export const startApi = (bot: SyncinkBot) => {
       });
 
       // Append token to redirect URL for cross-domain frontends (e.g. Vercel) where 3rd-party cookies may be restricted
-      let targetUrl = stateRecord.dashboardUrl;
       try {
         const parsedUrl = new URL(targetUrl);
         parsedUrl.searchParams.set('login', 'success');
@@ -735,6 +776,7 @@ export const startApi = (bot: SyncinkBot) => {
         targetUrl = `${targetUrl}${delimiter}login=success&token=${encodeURIComponent(sessionId)}`;
       }
 
+      console.log(`[OAuth] Successful login for ${user.username}. Redirecting back to: ${targetUrl}`);
       return res.redirect(targetUrl);
     } catch (error) {
       console.error('[API] Discord OAuth callback failed:', error);
