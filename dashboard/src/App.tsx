@@ -20,6 +20,7 @@ import InviteBot from './pages/InviteBot';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import FAQ from './pages/FAQ';
+import Status from './pages/Status';
 import type { Guild } from './types';
 
 import './index.css';
@@ -157,6 +158,7 @@ function DashboardLayout({ user, guilds, selectedGuild, onSelectGuild, onLogout,
             <Route path="/interface" element={<ProtectedRoute path="/interface" permLevel={permLevel}><motion.div key="iface" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Interface addToast={addToast} /></motion.div></ProtectedRoute>} />
             <Route path="/invite" element={<ProtectedRoute path="/invite" permLevel={permLevel}><motion.div key="invite" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><InviteBot /></motion.div></ProtectedRoute>} />
             <Route path="/guide" element={<ProtectedRoute path="/guide" permLevel={permLevel}><motion.div key="guide" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Guide /></motion.div></ProtectedRoute>} />
+            <Route path="/status" element={<ProtectedRoute path="/status" permLevel={permLevel}><motion.div key="status" variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.18 }}><Status /></motion.div></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
@@ -278,6 +280,8 @@ export default function App() {
         <Route path="/privacy" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Privacy /></motion.div></PublicLayout>} />
         <Route path="/terms" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Terms /></motion.div></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><FAQ /></motion.div></PublicLayout>} />
+        <Route path="/guide" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Guide /></motion.div></PublicLayout>} />
+        <Route path="/status" element={<PublicLayout user={user} onLogout={handleLogout}><motion.div variants={pv} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}><Status /></motion.div></PublicLayout>} />
         
         <Route path="*" element={
           !user ? (

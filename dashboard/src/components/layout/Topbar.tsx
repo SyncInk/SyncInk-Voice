@@ -85,31 +85,42 @@ export const Topbar = ({ user, onLogout, onMobileToggle }: TopbarProps) => {
         </div>
         <NavLink to="/invite" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Invite Bot</NavLink>
         <NavLink to="/guide" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Guide</NavLink>
+        <NavLink to="/status" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Status</NavLink>
         <NavLink to="/" className={({ isActive }) => `topbar-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
       </nav>
       <div className="topbar-right">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="user-avatar">
-            {user?.avatarUrl
-              ? <img src={user.avatarUrl} alt={displayName} />
-              : displayName[0]?.toUpperCase()}
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="user-avatar">
+              {user?.avatarUrl
+                ? <img src={user.avatarUrl} alt={displayName} />
+                : displayName[0]?.toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, lineHeight: 1 }}>{displayName}</span>
+              {user?.username && <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1, marginTop: 4 }}>@{user.username}</span>}
+            </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                title="Logout"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '4px 6px', borderRadius: 6, transition: 'color 0.2s, background 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
+              >
+                <LogOut size={15} />
+              </button>
+            )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, lineHeight: 1 }}>{displayName}</span>
-            {user?.username && <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1, marginTop: 4 }}>@{user.username}</span>}
-          </div>
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              title="Logout"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '4px 6px', borderRadius: 6, transition: 'color 0.2s, background 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
-            >
-              <LogOut size={15} />
-            </button>
-          )}
-        </div>
+        ) : (
+          <NavLink
+            to="/"
+            className="btn btn-primary"
+            style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, textDecoration: 'none' }}
+          >
+            Dashboard Login
+          </NavLink>
+        )}
       </div>
     </header>
   );

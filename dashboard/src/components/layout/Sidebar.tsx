@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Settings, ToggleLeft, Shield, User, Globe,
   Monitor, BookOpen, ChevronDown, Mic2,
-  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight, X
+  Lock, HelpCircle, FileText, Plus, RefreshCw, Wrench, ChevronRight, X, Activity
 } from 'lucide-react';
 import type { Guild } from '../../types';
 import { LOGO_URL } from '../../api';
@@ -83,6 +83,7 @@ export const NAV_ACCESS: Record<string, Record<PermLevel, boolean>> = {
   '/global-profile': { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/invite':         { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/guide':          { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
+  '/status':         { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/faq':            { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/privacy':        { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
   '/terms':          { Developer: true, Owner: true,  Administrator: true,  Moderator: true,  Staff: true,  Member: true  },
@@ -233,6 +234,7 @@ export const Sidebar = ({ guilds, selectedGuild, onSelectGuild, mobileOpen, onMo
         <NavItem to="/faq" icon={<HelpCircle size={16} />} label="FAQ" permLevel={permLevel} onClick={onMobileClose} />
         <NavItem to="/invite" icon={<Plus size={16} />} label="Invite Bot" permLevel={permLevel} onClick={onMobileClose} />
         <NavItem to="/guide" icon={<BookOpen size={16} />} label="Dashboard Guide" permLevel={permLevel} onClick={onMobileClose} />
+        <NavItem to="/status" icon={<Activity size={16} />} label="System Status" permLevel={permLevel} onClick={onMobileClose} />
         
         <div 
           onClick={() => setLegalOpen(!legalOpen)}
