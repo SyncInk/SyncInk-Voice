@@ -697,12 +697,22 @@ export const startApi = (bot: SyncinkBot) => {
     }
 
     // Discord OAuth redirect_uri
-    const baseUri = (process.env.DISCORD_REDIRECT_URI)
-      ? process.env.DISCORD_REDIRECT_URI.replace(/\/api\/auth\/discord\/callback$/, '')
-      : ((requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1'))
-        ? requestOrigin
-        : (ENV.API_BASE_URL || requestOrigin));
-    const redirectUri = process.env.DISCORD_REDIRECT_URI || `${baseUri}/api/auth/discord/callback`;
+    // CRITICAL: Discord requires redirect_uri to match EXACTLY what is registered
+    // in Discord Developer Portal OAuth2 settings.
+    let redirectUri = 'https://syncink-voice.onrender.com/api/auth/discord/callback';
+
+    if (process.env.DISCORD_REDIRECT_URI) {
+      redirectUri = process.env.DISCORD_REDIRECT_URI;
+    } else if (req.headers.host && (req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1'))) {
+      const proto = req.protocol || 'http';
+      redirectUri = `${proto}://${req.headers.host}/api/auth/discord/callback`;
+    } else if (req.headers.host && req.headers.host.includes('onrender.com')) {
+      redirectUri = `https://${req.headers.host}/api/auth/discord/callback`;
+    } else if (ENV.API_BASE_URL && !ENV.API_BASE_URL.includes('syncink.site')) {
+      redirectUri = `${ENV.API_BASE_URL.replace(/\/+$/, '')}/api/auth/discord/callback`;
+    } else {
+      redirectUri = 'https://syncink-voice.onrender.com/api/auth/discord/callback';
+    }
 
     console.log(`[OAuth] Login initiated. Return destination: ${dashboardUrl} | redirect_uri: ${redirectUri}`);
 
