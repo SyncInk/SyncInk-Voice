@@ -1,4 +1,13 @@
-import { ChannelType, TextChannel, VoiceChannel, VoiceState, ActionRowBuilder, ButtonBuilder, PermissionFlagsBits } from 'discord.js';
+import {
+  ChannelType,
+  TextChannel,
+  VoiceChannel,
+  VoiceState,
+  ActionRowBuilder,
+  ButtonBuilder,
+  PermissionFlagsBits,
+  OverwriteType,
+} from 'discord.js';
 import { SyncinkBot } from '../bot';
 import { GuildSettings } from '../../database/models/GuildSettings';
 import { GuildSetup } from '../../database/models/GuildSetup';
@@ -11,6 +20,7 @@ import {
   ensureOwnershipWarning,
   refreshRoomPanel,
   markPanelDeletionIgnored,
+  ensureRoomTextChannel,
 } from '../utils/tempRoom';
 import { sendWebhookMessage } from '../utils/webhook';
 import { logEvent } from '../utils/logger';
@@ -42,63 +52,154 @@ export const handleVoiceStateUpdate = async (
     return;
   }
 
-  const setup = newState.channelId
-    ? await GuildSetup.findOne({ guildId, generatorChannelId: newState.channelId })
-    : null;
-  const settings = await GuildSettings.findOne({ guildId });
+  const settings = await GuildSettings.findOne({ guildId }).catch(() => null);
+  let setup: any = null;
 
-  const isGeneratorChannel = newState.channelId
-    ? Boolean(
-      (setup && newState.channelId === setup.generatorChannelId)
-      || (!setup && settings?.setupChannelId === newState.channelId),
-    )
-    : false;
+  if (newState.channelId) {
+    // 1. Direct match on GuildSetup generatorChannelId
+    setup = await GuildSetup.findOne({ guildId, generatorChannelId: newState.channelId }).catch(() => null);
+
+    // 2. Match on GuildSettings setupChannelId
+    if (!setup && settings?.setupChannelId === newState.channelId) {
+      setup = (await GuildSetup.findOne({ guildId, isDefault: true }).catch(() => null))
+        || (await GuildSetup.findOne({ guildId }).catch(() => null));
+    }
+
+    // 3. Fallback: auto-detect by common generator names in registered categories
+    if (!setup && newState.channel) {
+      const channelNameLower = newState.channel.name.toLowerCase().trim();
+      const isNamedJoinToCreate =
+        channelNameLower.includes('join to create') ||
+        channelNameLower.includes('create your own') ||
+        channelNameLower.includes('create-vc') ||
+        channelNameLower.includes('custom vc');
+
+      if (isNamedJoinToCreate) {
+        const isUnderKnownCategory = Boolean(
+          (settings?.setupCategoryId && newState.channel.parentId === settings.setupCategoryId) ||
+          (await GuildSetup.exists({ guildId, categoryId: newState.channel.parentId }).catch(() => false))
+        );
+
+        if (isUnderKnownCategory) {
+          console.log(`[Join to Create] Auto-detected generator channel by name in guild ${guildId}: "${newState.channel.name}" (${newState.channelId})`);
+          setup = (await GuildSetup.findOne({ guildId, isDefault: true }).catch(() => null))
+            || (await GuildSetup.findOne({ guildId }).catch(() => null));
+
+          // Link it in DB so future lookups are immediate
+          await GuildSettings.updateOne({ guildId }, { setupChannelId: newState.channelId }).catch(() => null);
+          if (setup) {
+            await GuildSetup.updateOne({ _id: setup._id }, { generatorChannelId: newState.channelId }).catch(() => null);
+          }
+        }
+      }
+    }
+  }
+
+  const isGeneratorChannel = Boolean(
+    newState.channelId && (setup || (settings?.setupChannelId === newState.channelId))
+  );
 
   if (newState.channelId && isGeneratorChannel) {
+    console.log(`[Join to Create] Triggered by ${member.user.tag} (${member.id}) in channel ${newState.channelId} (guild: "${guild.name}")`);
+
     try {
-      const profile = await UserProfile.findOne({ userId: member.id });
+      const profile = await UserProfile.findOne({ userId: member.id }).catch(() => null);
       const rawTemplate = profile?.defaultName?.trim()
-        || setup?.channelNameTemplate
-        || settings?.defaultName
+        || setup?.channelNameTemplate?.trim()
+        || settings?.defaultName?.trim()
         || "{user}'s Room";
+
+      const formattedName = formatRoomName(rawTemplate, member).trim();
+      const channelName = (formattedName.length > 0 ? formattedName : `${member.displayName}'s Room`).slice(0, 100);
 
       const userLimit = profile?.defaultLimit ?? setup?.defaultUserLimit ?? settings?.defaultLimit ?? 0;
       const defaultBitrateKbps = setup?.defaultBitrate ?? 64;
       const bitrate = profile?.defaultBitrate
         ? Math.min(guild.maximumBitrate, Math.max(8_000, profile.defaultBitrate * 1_000))
         : Math.min(guild.maximumBitrate, Math.max(8_000, defaultBitrateKbps * 1_000));
-      const categoryId = setup?.categoryId ?? settings?.setupCategoryId ?? newState.channel?.parentId ?? undefined;
       const rtcRegion = setup?.defaultRegion ?? null;
+
+      // Validate target category
+      let targetCategoryId: string | undefined = undefined;
+      const preferredCatId = setup?.categoryId || settings?.setupCategoryId || newState.channel?.parentId;
+      if (preferredCatId) {
+        const cat = guild.channels.cache.get(preferredCatId);
+        if (cat && cat.type === ChannelType.GuildCategory) {
+          targetCategoryId = cat.id;
+        }
+      }
+
+      const permissionOverwrites = [
+        {
+          id: member.id,
+          type: OverwriteType.Member,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.Connect,
+            PermissionFlagsBits.Speak,
+            PermissionFlagsBits.Stream,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.UseExternalEmojis,
+          ],
+        },
+        {
+          id: guild.client.user!.id,
+          type: OverwriteType.Member,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.Connect,
+            PermissionFlagsBits.Speak,
+            PermissionFlagsBits.MoveMembers,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.ManageRoles,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.UseExternalEmojis,
+          ],
+        },
+      ];
 
       let newChannel: VoiceChannel;
       try {
         newChannel = await guild.channels.create({
-          name: formatRoomName(rawTemplate, member),
+          name: channelName,
           type: ChannelType.GuildVoice,
-          parent: categoryId || undefined,
+          parent: targetCategoryId,
           userLimit,
           bitrate,
           rtcRegion: rtcRegion ?? undefined,
-          permissionOverwrites: [
-            {
-              id: member.id,
-              allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-            },
-            {
-              id: guild.client.user!.id,
-              allow: [
-                PermissionFlagsBits.ViewChannel,
-                PermissionFlagsBits.Connect,
-              ],
-            },
-          ],
+          permissionOverwrites,
         });
-      } catch (err) {
-        console.error(`[Join to Create] Failed to create voice channel in guild ${guild.id}:`, err);
-        return;
+      } catch (catErr: any) {
+        console.warn(`[Join to Create] Failed creating in category ${targetCategoryId}, retrying without parent:`, catErr?.message);
+        try {
+          newChannel = await guild.channels.create({
+            name: channelName,
+            type: ChannelType.GuildVoice,
+            userLimit,
+            bitrate,
+            rtcRegion: rtcRegion ?? undefined,
+            permissionOverwrites,
+          });
+        } catch (fatalErr) {
+          console.error(`[Join to Create] Fatal: failed to create voice channel in guild ${guild.id}:`, fatalErr);
+          return;
+        }
       }
 
-      await newState.setChannel(newChannel);
+      // Move member to the newly created channel
+      try {
+        await newState.setChannel(newChannel);
+      } catch (moveErr) {
+        console.error(`[Join to Create] Failed to move member ${member.id} into ${newChannel.id}:`, moveErr);
+        await newChannel.delete().catch(() => null);
+        return;
+      }
 
       const tempDoc = await TempChannel.create({
         guildId,
@@ -116,7 +217,14 @@ export const handleVoiceStateUpdate = async (
         }).catch(() => null);
       }
 
-      await refreshRoomPanel(newChannel, tempDoc, member, settings, ENV.DASHBOARD_URL || undefined);
+      // If autoTextChannel is enabled, automatically provision the companion text channel
+      if (setup?.autoTextChannel) {
+        await ensureRoomTextChannel(newChannel, tempDoc, 'Automatic temporary voice room chat', getDisplayNameParts(member)).catch(() => null);
+      }
+
+      await refreshRoomPanel(newChannel, tempDoc, member, settings, ENV.DASHBOARD_URL || undefined).catch((panelErr) => {
+        console.error(`[Join to Create] Non-fatal: failed to refresh room panel:`, panelErr);
+      });
 
       if (setup?.welcomeMessage) {
         const ownerName = getDisplayNameParts(member);
@@ -147,14 +255,16 @@ export const handleVoiceStateUpdate = async (
         description: `${member} created \`${newChannel.name}\``,
         color: 0x57f287,
         executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
-      });
+      }).catch(() => null);
+
+      console.log(`[Join to Create] Successfully created "${newChannel.name}" (${newChannel.id}) for ${member.user.tag}`);
     } catch (error) {
       console.error('[VoiceState] Error creating temp channel:', error);
     }
   }
 
   if (newState.channelId) {
-    const tempChannel = await TempChannel.findOne({ channelId: newState.channelId });
+    const tempChannel = await TempChannel.findOne({ channelId: newState.channelId }).catch(() => null);
     const voiceChannel = guild.channels.cache.get(newState.channelId) as VoiceChannel | undefined;
 
     if (tempChannel && voiceChannel?.isVoiceBased()) {
@@ -194,15 +304,15 @@ export const handleVoiceStateUpdate = async (
         description: `${member} joined \`${voiceChannel?.name || 'Voice Channel'}\``,
         color: 0x3498db,
         executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
-      });
+      }).catch(() => null);
     }
   }
 
   if (oldState.channelId) {
-      const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId });
-      const oldChannel = guild.channels.cache.get(oldState.channelId);
+    const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId }).catch(() => null);
+    const oldChannel = guild.channels.cache.get(oldState.channelId);
 
-    if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldChannel.members.size === 0) {
+    if (tempChannelData && (!oldChannel || (oldChannel.isVoiceBased() && oldChannel.members.size === 0))) {
       try {
         if (tempChannelData.panelMessageId) {
           const panelChannel = tempChannelData.panelChannelId
@@ -225,16 +335,20 @@ export const handleVoiceStateUpdate = async (
           }
         }
 
-        await TempChannel.deleteOne({ channelId: oldState.channelId });
-        await oldChannel.delete();
+        await TempChannel.deleteOne({ channelId: oldState.channelId }).catch(() => null);
+        if (oldChannel) {
+          await oldChannel.delete().catch(() => null);
+        }
 
-        await logEvent({
-          guild,
-          type: 'channelDeleted',
-          title: 'Temporary Voice Channel Deleted',
-          description: `\`${oldChannel.name}\` was automatically deleted.`,
-          color: 0xed4245,
-        });
+        if (oldChannel) {
+          await logEvent({
+            guild,
+            type: 'channelDeleted',
+            title: 'Temporary Voice Channel Deleted',
+            description: `\`${oldChannel.name}\` was automatically deleted.`,
+            color: 0xed4245,
+          }).catch(() => null);
+        }
       } catch (error) {
         console.error('[VoiceState] Error deleting empty temp channel:', error);
       }
@@ -259,7 +373,7 @@ export const handleVoiceStateUpdate = async (
     }
 
     if (oldState.channelId !== newState.channelId) {
-      const oldSetup = await GuildSetup.findOne({ guildId, generatorChannelId: oldState.channelId });
+      const oldSetup = await GuildSetup.findOne({ guildId, generatorChannelId: oldState.channelId }).catch(() => null);
       const isLeavingGeneratorChannel = Boolean(
         (oldSetup && oldState.channelId === oldSetup.generatorChannelId) ||
         (!oldSetup && settings?.setupChannelId === oldState.channelId)
@@ -273,7 +387,7 @@ export const handleVoiceStateUpdate = async (
           description: `${member} was moved to their new temporary channel.`,
           color: 0x95a5a6,
           executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
-        });
+        }).catch(() => null);
       } else {
         await logEvent({
           guild,
@@ -282,7 +396,7 @@ export const handleVoiceStateUpdate = async (
           description: `${member} left \`${oldChannel?.name || 'Voice Channel'}\``,
           color: 0x95a5a6,
           executor: { id: member.id, tag: member.user.tag, avatarUrl: member.user.displayAvatarURL() },
-        });
+        }).catch(() => null);
       }
     }
   }

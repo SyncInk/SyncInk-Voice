@@ -8,6 +8,7 @@ import {
   VoiceChannel,
 } from 'discord.js';
 import { GuildSettings } from '../../database/models/GuildSettings';
+import { GuildSetup } from '../../database/models/GuildSetup';
 import { EMOJIS } from '../utils/emojis';
 
 export const data = new SlashCommandBuilder()
@@ -63,6 +64,9 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         ManageChannels: true,
         ManageRoles: true,
         MoveMembers: true,
+        Connect: true,
+        SendMessages: true,
+        EmbedLinks: true,
       });
     } catch (err) {
       console.warn(`[Setup] Could not enforce category permissions for ${guild.id}`);
@@ -91,6 +95,21 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         setupChannelId: createChannel.id,
         setupCategoryId: category.id,
         voiceControlChannelId: controlChannel.id,
+      },
+      { upsert: true, new: true },
+    );
+
+    await GuildSetup.findOneAndUpdate(
+      { guildId: guild.id, isDefault: true },
+      {
+        guildId: guild.id,
+        name: 'Join to Create',
+        generatorChannelId: createChannel.id,
+        categoryId: category.id,
+        channelNameTemplate: "{user}'s Room",
+        defaultUserLimit: 0,
+        defaultBitrate: 64,
+        isDefault: true,
       },
       { upsert: true, new: true },
     );
