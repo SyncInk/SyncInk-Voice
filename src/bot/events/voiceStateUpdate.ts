@@ -17,7 +17,6 @@ import {
   formatRoomName,
   getDisplayNameParts,
   clearOwnershipWarning,
-  ensureOwnershipWarning,
   refreshRoomPanel,
   markPanelDeletionIgnored,
   ensureRoomTextChannel,
@@ -45,11 +44,18 @@ export const handleVoiceStateUpdate = async (
   }
 
   const guild = newState.guild || oldState.guild;
-  const guildId = guild.id;
-  const member = newState.member || oldState.member;
-
-  if (!member) {
+  if (!guild) {
     return;
+  }
+  const guildId = guild.id;
+
+  // Resolve member if cached or fetchable, but NEVER block channel departure/cleanup if uncached
+  let member = newState.member || oldState.member;
+  if (!member) {
+    const userId = newState.id || oldState.id;
+    if (userId) {
+      member = guild.members.cache.get(userId) || (await guild.members.fetch(userId).catch(() => null));
+    }
   }
 
   const settings = await GuildSettings.findOne({ guildId }).catch(() => null);
@@ -100,8 +106,8 @@ export const handleVoiceStateUpdate = async (
   );
 
   if (newState.channelId && isGeneratorChannel) {
-    if (member.user.bot) {
-      // Bots cannot create temporary channels - disconnect from generator
+    if (!member || member.user.bot) {
+      // Bots or unresolvable accounts cannot create temporary channels
       await newState.disconnect().catch(() => null);
       return;
     }
@@ -321,82 +327,111 @@ export const handleVoiceStateUpdate = async (
       oldChannel = (await guild.channels.fetch(oldState.channelId).catch(() => null)) as VoiceChannel | undefined;
     }
 
-    // A temporary channel is considered empty and must be deleted if:
-    // 1. Channel was deleted or is missing from Discord
-    // 2. Channel has 0 members remaining (everyone left, or a bot was the last to leave)
-    // 3. Or only bots remain in the channel (all human members have departed)
-    const isChannelEmpty =
-      !oldChannel ||
-      !oldChannel.isVoiceBased() ||
-      oldChannel.members.size === 0 ||
-      oldChannel.members.every((m) => m.user.bot);
+    // Determine if this channel was a managed temporary room:
+    // Either it has a TempChannel record in DB, OR it's a voice channel under the generator category (and not the generator itself)
+    const isUnderVoiceCategory = Boolean(
+      oldChannel &&
+      ((settings?.setupCategoryId && oldChannel.parentId === settings.setupCategoryId) ||
+       (setup?.categoryId && oldChannel.parentId === setup.categoryId)) &&
+      oldChannel.id !== settings?.setupChannelId &&
+      oldChannel.id !== setup?.generatorChannelId
+    );
 
-    if (tempChannelData && isChannelEmpty) {
-      try {
-        if (tempChannelData.panelMessageId) {
-          const panelChannel = tempChannelData.panelChannelId
-            ? guild.channels.cache.get(tempChannelData.panelChannelId)
-            : null;
-          const panelMessage = panelChannel?.isTextBased()
-            ? await panelChannel.messages.fetch(tempChannelData.panelMessageId).catch(() => null)
-            : null;
+    const isManagedRoom = Boolean(tempChannelData || isUnderVoiceCategory);
 
-          if (panelMessage) {
-            markPanelDeletionIgnored(panelMessage.id);
-            await panelMessage.delete().catch(() => null);
+    if (isManagedRoom) {
+      // Check active voice states in guild.voiceStates.cache directly for 100% accuracy
+      const activeVoiceStates = guild.voiceStates.cache.filter((vs) => vs.channelId === oldState.channelId);
+
+      let hasHumanRemaining = false;
+      for (const vs of activeVoiceStates.values()) {
+        const u = vs.member?.user || client.users.cache.get(vs.id);
+        if (u) {
+          if (!u.bot) {
+            hasHumanRemaining = true;
+            break;
+          }
+        } else {
+          const fetchedMember = await guild.members.fetch(vs.id).catch(() => null);
+          if (fetchedMember && !fetchedMember.user.bot) {
+            hasHumanRemaining = true;
+            break;
           }
         }
+      }
 
-        if (tempChannelData.textChannelId) {
-          const textChannel = guild.channels.cache.get(tempChannelData.textChannelId)
-            || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null));
-          if (textChannel) {
-            await textChannel.delete().catch(() => null);
+      // Channel is empty and MUST be deleted if:
+      // 1. Channel already deleted from Discord (!oldChannel)
+      // 2. 0 members/bots remain in the channel (activeVoiceStates.size === 0)
+      // 3. Or 0 humans remain in the channel (!hasHumanRemaining) - e.g. only bots remain or human owner left
+      const shouldDelete = !oldChannel || !oldChannel.isVoiceBased() || activeVoiceStates.size === 0 || !hasHumanRemaining;
+
+      if (shouldDelete) {
+        console.log(`[TempChannel] Deleting empty room "${oldChannel?.name || oldState.channelId}" (active states: ${activeVoiceStates.size}, hasHuman: ${hasHumanRemaining}) in guild "${guild.name}"`);
+
+        try {
+          if (tempChannelData?.panelMessageId) {
+            const panelChannel = tempChannelData.panelChannelId
+              ? guild.channels.cache.get(tempChannelData.panelChannelId)
+              : null;
+            const panelMessage = panelChannel?.isTextBased()
+              ? await panelChannel.messages.fetch(tempChannelData.panelMessageId).catch(() => null)
+              : null;
+
+            if (panelMessage) {
+              markPanelDeletionIgnored(panelMessage.id);
+              await panelMessage.delete().catch(() => null);
+            }
           }
+
+          if (tempChannelData?.textChannelId) {
+            const textChannel = guild.channels.cache.get(tempChannelData.textChannelId)
+              || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null));
+            if (textChannel) {
+              await textChannel.delete().catch(() => null);
+            }
+          }
+
+          if (oldChannel) {
+            await oldChannel.delete().catch((delErr) => {
+              console.error(`[VoiceState] Failed to delete Discord voice channel ${oldChannel?.id}:`, delErr);
+            });
+          }
+
+          await TempChannel.deleteOne({ channelId: oldState.channelId }).catch(() => null);
+
+          if (oldChannel) {
+            await logEvent({
+              guild,
+              type: 'channelDeleted',
+              title: 'Temporary Voice Channel Deleted',
+              description: `\`${oldChannel.name}\` was automatically deleted.`,
+              color: 0xed4245,
+            }).catch(() => null);
+          }
+        } catch (error) {
+          console.error('[VoiceState] Error deleting empty temp channel:', error);
+        }
+      } else if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldState.channelId !== newState.channelId) {
+        // Human members still remain. DO NOT trigger ownership warning or transfer!
+        const owner = await getOwnerMember(guild, tempChannelData.ownerId, member);
+        if (owner) {
+          await refreshRoomPanel(oldChannel as VoiceChannel, tempChannelData, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
         }
 
-        await TempChannel.deleteOne({ channelId: oldState.channelId }).catch(() => null);
-        if (oldChannel) {
-          await oldChannel.delete().catch(() => null);
-        }
-
-        if (oldChannel) {
-          await logEvent({
-            guild,
-            type: 'channelDeleted',
-            title: 'Temporary Voice Channel Deleted',
-            description: `\`${oldChannel.name}\` was automatically deleted.`,
-            color: 0xed4245,
-          }).catch(() => null);
-        }
-      } catch (error) {
-        console.error('[VoiceState] Error deleting empty temp channel:', error);
-      }
-    } else if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldState.channelId !== newState.channelId) {
-      if (oldState.member && !oldState.member.user.bot && tempChannelData.ownerId === oldState.member.id && oldChannel.members.size > 0) {
-        const remainingHumans = oldChannel.members.filter((m) => !m.user.bot);
-        if (remainingHumans.size > 0) {
-          await ensureOwnershipWarning(oldChannel as VoiceChannel, tempChannelData, oldState.member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
-        }
-      }
-
-      const owner = await getOwnerMember(guild, tempChannelData.ownerId, member);
-      if (owner) {
-        await refreshRoomPanel(oldChannel as VoiceChannel, tempChannelData, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
-      }
-
-      if (tempChannelData.textChannelId && !member.user.bot) {
-        const textChannel = (guild.channels.cache.get(tempChannelData.textChannelId)
-          || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null))) as TextChannel | undefined;
-        if (textChannel?.isTextBased()) {
-          if (!tempChannelData.permittedUsers.includes(member.id) && tempChannelData.ownerId !== member.id) {
-            await textChannel.permissionOverwrites.delete(member.id).catch(() => null);
+        if (tempChannelData.textChannelId && member && !member.user.bot) {
+          const textChannel = (guild.channels.cache.get(tempChannelData.textChannelId)
+            || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null))) as TextChannel | undefined;
+          if (textChannel?.isTextBased()) {
+            if (!tempChannelData.permittedUsers.includes(member.id) && tempChannelData.ownerId !== member.id) {
+              await textChannel.permissionOverwrites.delete(member.id).catch(() => null);
+            }
           }
         }
       }
     }
 
-    if (oldState.channelId !== newState.channelId && !member.user.bot) {
+    if (member && !member.user.bot && oldState.channelId !== newState.channelId) {
       const oldSetup = await GuildSetup.findOne({ guildId, generatorChannelId: oldState.channelId }).catch(() => null);
       const isLeavingGeneratorChannel = Boolean(
         (oldSetup && oldState.channelId === oldSetup.generatorChannelId) ||

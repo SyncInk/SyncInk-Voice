@@ -569,56 +569,20 @@ const expireOwnershipWarning = async (guild: Guild, channelId: string, dashboard
 };
 
 export const ensureOwnershipWarning = async (
-  voiceChannel: VoiceChannel,
+  _voiceChannel: VoiceChannel,
   tempChannel: ITempChannel,
-  member: GuildMember,
-  settings?: IGuildSettings | null,
-  dashboardUrl?: string,
+  _member?: GuildMember,
+  _settings?: IGuildSettings | null,
+  _dashboardUrl?: string,
 ) => {
-  const existingExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() ?? 0;
-  const now = Date.now();
-
-  if (existingExpiresAt && existingExpiresAt > now) {
-    const textChannel = await getPanelTargetChannel(voiceChannel, tempChannel);
-    const roomTextChannel = textChannel || await ensureRoomTextChannel(
-      voiceChannel,
-      tempChannel,
-      'Temporary voice room chat',
-      getDisplayNameParts(member),
-    ).catch(() => null);
-
-    if (roomTextChannel && tempChannel.ownerWarningMessageId) {
-      const existingWarning = await roomTextChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
-      if (existingWarning) {
-        scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
-        return tempChannel;
-      }
-    }
-
-    if (roomTextChannel) {
-      await sendOwnershipWarningMessage(voiceChannel, tempChannel, member, settings).catch(() => null);
-    }
-
-    scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
-    return tempChannel;
-  }
-
-  tempChannel.ownerWarningExpiresAt = new Date(now + OWNER_WARNING_DURATION_MS);
-  await tempChannel.save();
-
-  await sendOwnershipWarningMessage(voiceChannel, tempChannel, member, settings).catch(async () => {
-    // Keep the warning active even if Discord briefly fails so it can be restored later.
-    await tempChannel.save().catch(() => null);
-  });
-
-  scheduleOwnershipWarningExpiry(voiceChannel.guild, tempChannel, dashboardUrl);
+  // Ownership transfer on owner leave is completely disabled
   return tempChannel;
 };
 
 export const clearOwnershipWarning = async (
   guild: Guild,
   tempChannel: ITempChannel,
-  reason: 'returned' | 'transferred' = 'returned',
+  _reason: 'returned' | 'transferred' = 'returned',
 ) => {
   clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
 
@@ -628,15 +592,7 @@ export const clearOwnershipWarning = async (
   if (textChannel && tempChannel.ownerWarningMessageId) {
     const warningMessage = await textChannel.messages.fetch(tempChannel.ownerWarningMessageId).catch(() => null);
     if (warningMessage) {
-      const embed = reason === 'returned'
-        ? buildOwnerReturnedEmbed(voiceChannel?.name || 'Temporary Voice Channel')
-        : buildOwnershipTransferredEmbed(voiceChannel?.name || 'Temporary Voice Channel');
-
-      await warningMessage.edit({
-        embeds: [embed],
-        components: [],
-        allowedMentions: { parse: [] },
-      }).catch(() => null);
+      await warningMessage.delete().catch(() => null);
     }
   }
 
@@ -645,31 +601,8 @@ export const clearOwnershipWarning = async (
   await tempChannel.save().catch(() => null);
 };
 
-export const restoreOwnershipWarnings = async (guild: Guild, tempChannels: ITempChannel[], dashboardUrl?: string) => {
-  for (const tempChannel of tempChannels) {
-    if (!tempChannel.ownerWarningExpiresAt) {
-      clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
-      continue;
-    }
-
-    const voiceChannel = guild.channels.cache.get(tempChannel.channelId);
-    if (!voiceChannel || !voiceChannel.isVoiceBased()) {
-      clearOwnershipWarningTimer(guild.id, tempChannel.channelId);
-      continue;
-    }
-
-    const owner = await guild.members.fetch(tempChannel.ownerId).catch(() => null);
-    if (owner && voiceChannel.members.has(owner.id)) {
-      await clearOwnershipWarning(guild, tempChannel, 'returned');
-      continue;
-    }
-
-    if (owner) {
-      await ensureOwnershipWarning(voiceChannel as VoiceChannel, tempChannel, owner, null, dashboardUrl).catch(() => null);
-    } else {
-      scheduleOwnershipWarningExpiry(guild, tempChannel, dashboardUrl);
-    }
-  }
+export const restoreOwnershipWarnings = async (_guild: Guild, _tempChannels: ITempChannel[], _dashboardUrl?: string) => {
+  // Automatic ownership warnings on owner leave are disabled
 };
 
 export const refreshRoomPanel = async (

@@ -38,7 +38,6 @@ export const getPanelDropdowns = () => {
       { label: 'Region', description: 'Change the voice server region', value: 'opt_region', emoji: { id: '1517256470230732840', name: 'syncinkvoiceregion' } },
       { label: 'Text', description: 'Create a temporary text chat', value: 'opt_text', emoji: { id: '1517256986901614732', name: 'syncinkvoicetext' } },
       { label: 'NSFW', description: 'Toggle NSFW restriction', value: 'opt_nsfw', emoji: { id: '1517255998761337014', name: 'syncinkvoicensfw' } },
-      { label: 'Claim', description: 'Claim ownership if owner leaves', value: 'opt_claim', emoji: { id: '1517253606686986323', name: 'syncinkvoiceclaimtransfer' } },
     );
 
   const usersMenu = new StringSelectMenuBuilder()

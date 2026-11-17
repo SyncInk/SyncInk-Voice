@@ -151,45 +151,9 @@ export const handleSelectMenuInteraction = async (interaction: StringSelectMenuI
   }
 
   if (value === 'opt_claim') {
-    if (tempChannel.ownerId === interaction.user.id) {
-      return interaction.reply({
-        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Already owner`, 'You are already the owner of this VC.')],
-        ephemeral: true,
-      });
-    }
-
-    if (channel.members.has(tempChannel.ownerId)) {
-      return interaction.reply({
-        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner is still here`, 'You can only claim this room after the current owner leaves.')],
-        ephemeral: true,
-      });
-    }
-
-    const warningExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() || 0;
-    if (warningExpiresAt && warningExpiresAt > Date.now()) {
-      const remainingSeconds = Math.ceil((warningExpiresAt - Date.now()) / 1000);
-      return interaction.reply({
-        embeds: [
-          buildRoomEmbed(
-            'Ownership protection active',
-            `Please wait **${remainingSeconds} seconds** before claiming this room.`,
-          ),
-        ],
-        ephemeral: true,
-      });
-    }
-
-    if (warningExpiresAt && warningExpiresAt <= Date.now()) {
-      await clearOwnershipWarning(guild, tempChannel, 'transferred');
-    }
-
-    await interaction.deferReply({ ephemeral: true }).catch(() => null);
-
-    tempChannel.ownerId = interaction.user.id;
-    await tempChannel.save().catch(() => null);
-    await refreshRoomPanel(channel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
-    return interaction.editReply({
-      embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership Claimed`, `<@${interaction.user.id}> is now the owner of this room.`)],
+    return interaction.reply({
+      embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Disabled`, 'Ownership transfer is disabled on this server.')],
+      ephemeral: true,
     });
   }
 

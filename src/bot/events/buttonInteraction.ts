@@ -320,46 +320,8 @@ export const handleButtonInteraction = async (interaction: ButtonInteraction) =>
 
     case 'btn_claim_room': {
       await interaction.deferReply({ ephemeral: true }).catch(() => null);
-      if (!voiceChannel.members.has(interaction.user.id)) {
-        return interaction.editReply({
-          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Not In Voice Channel`, 'You must be inside the voice channel to use this button.')],
-        });
-      }
-
-      if (tempChannel.ownerId === interaction.user.id) {
-        return interaction.editReply({
-          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Already owner`, 'You are already the owner of this VC.')],
-        });
-      }
-
-      if (voiceChannel.members.has(tempChannel.ownerId)) {
-        return interaction.editReply({
-          embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Owner is still here`, 'You can only claim this room after the current owner leaves.')],
-        });
-      }
-
-      const warningExpiresAt = tempChannel.ownerWarningExpiresAt?.getTime() || 0;
-      if (warningExpiresAt && warningExpiresAt > Date.now()) {
-        const remainingSeconds = Math.ceil((warningExpiresAt - Date.now()) / 1000);
-        return interaction.editReply({
-          embeds: [
-            buildRoomEmbed(
-              'Ownership protection active',
-              `Please wait **${remainingSeconds} seconds** before claiming this room.`,
-            ),
-          ],
-        });
-      }
-
-      if (warningExpiresAt && warningExpiresAt <= Date.now()) {
-        await clearOwnershipWarning(guild, tempChannel, 'transferred');
-      }
-
-      tempChannel.ownerId = interaction.user.id;
-      await tempChannel.save().catch(() => null);
-      await refreshRoomPanel(voiceChannel, tempChannel, member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       return interaction.editReply({
-        embeds: [buildRoomEmbed(`${EMOJIS.APPROVED} Ownership Claimed`, `<@${interaction.user.id}> is now the owner of this room.`)],
+        embeds: [buildRoomEmbed(`${EMOJIS.REFUSED} Disabled`, 'Ownership transfer is disabled on this server.')],
       });
     }
 
