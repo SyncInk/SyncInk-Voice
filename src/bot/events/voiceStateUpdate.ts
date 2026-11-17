@@ -275,7 +275,7 @@ export const handleVoiceStateUpdate = async (
     }
   }
 
-  if (newState.channelId) {
+  if (newState.channelId && member) {
     const tempChannel = await TempChannel.findOne({ channelId: newState.channelId }).catch(() => null);
     const voiceChannel = guild.channels.cache.get(newState.channelId) as VoiceChannel | undefined;
 
