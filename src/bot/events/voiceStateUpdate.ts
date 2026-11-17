@@ -48,7 +48,7 @@ export const handleVoiceStateUpdate = async (
   const guildId = guild.id;
   const member = newState.member || oldState.member;
 
-  if (!member || member.user.bot) {
+  if (!member) {
     return;
   }
 
@@ -100,6 +100,12 @@ export const handleVoiceStateUpdate = async (
   );
 
   if (newState.channelId && isGeneratorChannel) {
+    if (member.user.bot) {
+      // Bots cannot create temporary channels - disconnect from generator
+      await newState.disconnect().catch(() => null);
+      return;
+    }
+
     console.log(`[Join to Create] Triggered by ${member.user.tag} (${member.id}) in channel ${newState.channelId} (guild: "${guild.name}")`);
 
     try {
@@ -270,14 +276,14 @@ export const handleVoiceStateUpdate = async (
     if (tempChannel && voiceChannel?.isVoiceBased()) {
       const owner = await getOwnerMember(guild, tempChannel.ownerId, member);
       if (owner) {
-        if (tempChannel.ownerWarningExpiresAt) {
+        if (!member.user.bot && tempChannel.ownerWarningExpiresAt && member.id === tempChannel.ownerId) {
           await clearOwnershipWarning(guild, tempChannel, 'returned');
         }
 
         await refreshRoomPanel(voiceChannel, tempChannel, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       }
 
-      if (tempChannel.lfmMessageId && tempChannel.lfmChannelId && member.id !== tempChannel.ownerId) {
+      if (!member.user.bot && tempChannel.lfmMessageId && tempChannel.lfmChannelId && member.id !== tempChannel.ownerId) {
         const lfmChannel = guild.channels.cache.get(tempChannel.lfmChannelId);
         if (lfmChannel?.isTextBased()) {
           const lfmMsg = await lfmChannel.messages.fetch(tempChannel.lfmMessageId).catch(() => null);
@@ -296,7 +302,7 @@ export const handleVoiceStateUpdate = async (
       }
     }
 
-    if (oldState.channelId !== newState.channelId && !isGeneratorChannel) {
+    if (oldState.channelId !== newState.channelId && !isGeneratorChannel && !member.user.bot) {
       await logEvent({
         guild,
         type: 'userMovement',
@@ -310,9 +316,22 @@ export const handleVoiceStateUpdate = async (
 
   if (oldState.channelId) {
     const tempChannelData = await TempChannel.findOne({ channelId: oldState.channelId }).catch(() => null);
-    const oldChannel = guild.channels.cache.get(oldState.channelId);
+    let oldChannel = guild.channels.cache.get(oldState.channelId) as VoiceChannel | undefined;
+    if (!oldChannel) {
+      oldChannel = (await guild.channels.fetch(oldState.channelId).catch(() => null)) as VoiceChannel | undefined;
+    }
 
-    if (tempChannelData && (!oldChannel || (oldChannel.isVoiceBased() && oldChannel.members.size === 0))) {
+    // A temporary channel is considered empty and must be deleted if:
+    // 1. Channel was deleted or is missing from Discord
+    // 2. Channel has 0 members remaining (everyone left, or a bot was the last to leave)
+    // 3. Or only bots remain in the channel (all human members have departed)
+    const isChannelEmpty =
+      !oldChannel ||
+      !oldChannel.isVoiceBased() ||
+      oldChannel.members.size === 0 ||
+      oldChannel.members.every((m) => m.user.bot);
+
+    if (tempChannelData && isChannelEmpty) {
       try {
         if (tempChannelData.panelMessageId) {
           const panelChannel = tempChannelData.panelChannelId
@@ -329,7 +348,8 @@ export const handleVoiceStateUpdate = async (
         }
 
         if (tempChannelData.textChannelId) {
-          const textChannel = guild.channels.cache.get(tempChannelData.textChannelId);
+          const textChannel = guild.channels.cache.get(tempChannelData.textChannelId)
+            || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null));
           if (textChannel) {
             await textChannel.delete().catch(() => null);
           }
@@ -353,8 +373,11 @@ export const handleVoiceStateUpdate = async (
         console.error('[VoiceState] Error deleting empty temp channel:', error);
       }
     } else if (tempChannelData && oldChannel && oldChannel.isVoiceBased() && oldState.channelId !== newState.channelId) {
-      if (oldState.member && tempChannelData.ownerId === oldState.member.id && oldChannel.members.size > 0) {
-        await ensureOwnershipWarning(oldChannel as VoiceChannel, tempChannelData, oldState.member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+      if (oldState.member && !oldState.member.user.bot && tempChannelData.ownerId === oldState.member.id && oldChannel.members.size > 0) {
+        const remainingHumans = oldChannel.members.filter((m) => !m.user.bot);
+        if (remainingHumans.size > 0) {
+          await ensureOwnershipWarning(oldChannel as VoiceChannel, tempChannelData, oldState.member, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
+        }
       }
 
       const owner = await getOwnerMember(guild, tempChannelData.ownerId, member);
@@ -362,8 +385,9 @@ export const handleVoiceStateUpdate = async (
         await refreshRoomPanel(oldChannel as VoiceChannel, tempChannelData, owner, settings, ENV.DASHBOARD_URL || undefined).catch(() => null);
       }
 
-      if (tempChannelData.textChannelId) {
-        const textChannel = guild.channels.cache.get(tempChannelData.textChannelId) as TextChannel | undefined;
+      if (tempChannelData.textChannelId && !member.user.bot) {
+        const textChannel = (guild.channels.cache.get(tempChannelData.textChannelId)
+          || (await guild.channels.fetch(tempChannelData.textChannelId).catch(() => null))) as TextChannel | undefined;
         if (textChannel?.isTextBased()) {
           if (!tempChannelData.permittedUsers.includes(member.id) && tempChannelData.ownerId !== member.id) {
             await textChannel.permissionOverwrites.delete(member.id).catch(() => null);
@@ -372,7 +396,7 @@ export const handleVoiceStateUpdate = async (
       }
     }
 
-    if (oldState.channelId !== newState.channelId) {
+    if (oldState.channelId !== newState.channelId && !member.user.bot) {
       const oldSetup = await GuildSetup.findOne({ guildId, generatorChannelId: oldState.channelId }).catch(() => null);
       const isLeavingGeneratorChannel = Boolean(
         (oldSetup && oldState.channelId === oldSetup.generatorChannelId) ||

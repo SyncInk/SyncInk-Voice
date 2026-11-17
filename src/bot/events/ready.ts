@@ -12,7 +12,10 @@ export const handleReady = async (client: SyncinkBot) => {
       try {
         const tempChannels = await TempChannel.find({ guildId: guild.id }).catch(() => []);
         for (const tc of tempChannels) {
-          const ch = guild.channels.cache.get(tc.channelId);
+          let ch = guild.channels.cache.get(tc.channelId);
+          if (!ch) {
+            ch = (await guild.channels.fetch(tc.channelId).catch(() => null)) as any;
+          }
 
           // If channel was deleted while bot was offline, prune from DB
           if (!ch) {
@@ -21,11 +24,13 @@ export const handleReady = async (client: SyncinkBot) => {
             continue;
           }
 
-          // If channel is voice based and has 0 members, delete it and its companion text channel
-          if (ch.isVoiceBased() && ch.members.size === 0) {
+          // If channel is voice based and has 0 members or only bots remain, delete it and its companion text channel
+          const isChannelEmpty = ch.isVoiceBased() && (ch.members.size === 0 || ch.members.every((m) => m.user.bot));
+          if (isChannelEmpty) {
             console.log(`[Cleaner] Deleting empty orphaned channel "${ch.name}" (${ch.id}) in guild "${guild.name}"`);
             if (tc.textChannelId) {
-              const textCh = guild.channels.cache.get(tc.textChannelId);
+              const textCh = guild.channels.cache.get(tc.textChannelId)
+                || (await guild.channels.fetch(tc.textChannelId).catch(() => null));
               if (textCh) {
                 await textCh.delete().catch(() => null);
               }
